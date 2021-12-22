@@ -21,7 +21,7 @@ fn build_ui() -> impl Widget<State> {
         .must_fill_main_axis(true)
         .with_child(build_sidebar_header())
         .with_child(build_sidebar_navigation())
-        .background(theme::BACKGROUND_DARK);
+        .background(theme::BACKGROUND_LIGHT);
 
     let main = ViewSwitcher::new(
         |state: &State, _env| state.nav,
@@ -30,7 +30,7 @@ fn build_ui() -> impl Widget<State> {
             Nav::BankAccounts => Box::new(build_bank_account_page()),
         },
     )
-    .background(theme::BACKGROUND_LIGHT)
+    .background(theme::BACKGROUND_DARK)
     .expand();
 
     Split::columns(sidebar, main)
