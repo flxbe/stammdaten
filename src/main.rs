@@ -4,11 +4,11 @@ mod widgets;
 
 use crate::data::Profile;
 use crate::state::{AppState, BankAccountState, Nav, ProfileState};
-use crate::widgets::{NavController, NAVIGATE};
+use crate::widgets::{NavController, OutlineButton, NAVIGATE};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use druid::widget::{
-    Button, CrossAxisAlignment, Flex, Label, List, MainAxisAlignment, SizedBox, Split, Svg,
-    SvgData, ViewSwitcher,
+    CrossAxisAlignment, Flex, Label, List, MainAxisAlignment, SizedBox, Split, Svg, SvgData,
+    ViewSwitcher,
 };
 use druid::{theme, AppLauncher, LensExt, PlatformError, Widget, WidgetExt, WindowDesc};
 use webbrowser;
@@ -110,7 +110,7 @@ fn build_home_item(
                 .with_child(Label::new(title).with_text_size(12.0)),
         )
         .with_child(
-            Button::new("Kopieren")
+            OutlineButton::new("Kopieren")
                 .on_click(move |_ctx, state: &mut AppState, _env| copy_to_clipboard(f(state))),
         )
         .padding(10.0)
@@ -127,7 +127,6 @@ fn build_bank_account_page() -> impl Widget<AppState> {
 fn build_bank_account() -> impl Widget<BankAccountState> {
     Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
-        .main_axis_alignment(MainAxisAlignment::SpaceBetween)
         .must_fill_main_axis(true)
         .with_child(
             Flex::column()
@@ -140,11 +139,13 @@ fn build_bank_account() -> impl Widget<BankAccountState> {
                         .with_text_size(12.0),
                 ),
         )
+        .with_flex_spacer(1.0)
         .with_child(
-            Button::new("Onlinebanking")
+            OutlineButton::new("Onlinebanking")
                 .on_click(|_ctx, account: &mut BankAccountState, _env| open_url(&account.url)),
         )
-        .with_child(Button::new("IBAN Kopieren").on_click(
+        .with_default_spacer()
+        .with_child(OutlineButton::new("IBAN Kopieren").on_click(
             |_ctx, account: &mut BankAccountState, _env| copy_to_clipboard(&account.iban),
         ))
         .padding(10.0)
@@ -175,6 +176,7 @@ fn main() -> Result<(), PlatformError> {
             .window_size((800.0, 600.0))
             .resizable(false),
     )
+    .use_simple_logger()
     .launch(initial_state)?;
     Ok(())
 }
