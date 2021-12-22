@@ -1,22 +1,19 @@
-mod profile;
-mod social_security_number;
+mod data;
 mod state;
-mod tax_id;
 mod widgets;
 
-use crate::profile::{BankAccount, Profile};
-use crate::state::{Nav, State};
+use crate::data::Profile;
+use crate::state::{AppState, BankAccountState, Nav, ProfileState};
 use crate::widgets::{NavController, NAVIGATE};
 use clipboard::{ClipboardContext, ClipboardProvider};
-use druid::im::Vector;
 use druid::widget::{
     Button, CrossAxisAlignment, Flex, Label, List, MainAxisAlignment, SizedBox, Split, Svg,
     SvgData, ViewSwitcher,
 };
-use druid::{theme, AppLauncher, PlatformError, Widget, WidgetExt, WindowDesc};
+use druid::{theme, AppLauncher, LensExt, PlatformError, Widget, WidgetExt, WindowDesc};
 use webbrowser;
 
-fn build_ui() -> impl Widget<State> {
+fn build_ui() -> impl Widget<AppState> {
     let sidebar = Flex::column()
         .must_fill_main_axis(true)
         .with_child(build_sidebar_header())
@@ -24,7 +21,7 @@ fn build_ui() -> impl Widget<State> {
         .background(theme::BACKGROUND_LIGHT);
 
     let main = ViewSwitcher::new(
-        |state: &State, _env| state.nav,
+        |state: &AppState, _env| state.nav,
         |nav, _state, _env| match nav {
             Nav::Home => Box::new(build_home()),
             Nav::BankAccounts => Box::new(build_bank_account_page()),
@@ -42,7 +39,7 @@ fn build_ui() -> impl Widget<State> {
         .controller(NavController)
 }
 
-fn build_sidebar_header() -> impl Widget<State> {
+fn build_sidebar_header() -> impl Widget<AppState> {
     let profile_svg = include_str!("profile-svgrepo-com.svg")
         .parse::<SvgData>()
         .unwrap();
@@ -58,39 +55,39 @@ fn build_sidebar_header() -> impl Widget<State> {
         .with_child(
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Label::new(|state: &State, _env: &_| {
-                    format!("{} {}", state.first_name, state.last_name)
+                .with_child(Label::new(|state: &AppState, _env: &_| {
+                    format!("{} {}", state.profile.first_name, state.profile.last_name)
                 })),
         )
         .expand_width()
         .padding(30.0)
 }
 
-fn build_sidebar_navigation() -> impl Widget<State> {
+fn build_sidebar_navigation() -> impl Widget<AppState> {
     Flex::column()
         .with_default_spacer()
         .with_child(sidebar_link_widget("Basisdaten", Nav::Home))
         .with_child(sidebar_link_widget("Konten", Nav::BankAccounts))
 }
 
-fn sidebar_link_widget(title: &str, link_nav: Nav) -> impl Widget<State> {
+fn sidebar_link_widget(title: &str, link_nav: Nav) -> impl Widget<AppState> {
     Label::new(title)
         .with_text_size(20.0)
         .expand_width()
-        .lens(State::nav)
+        .lens(AppState::nav)
         .padding((25.0, 10.0))
         .on_click(move |ctx, _, _| ctx.submit_command(NAVIGATE.with(link_nav)))
 }
 
-fn build_home() -> impl Widget<State> {
+fn build_home() -> impl Widget<AppState> {
     Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .with_child(build_home_item("Sozialversicherungsnummer", |state| {
-            state.social_security_number.to_string()
+            state.profile.social_security_number.to_string()
         }))
         .with_default_spacer()
         .with_child(build_home_item("Steuer-ID", |state| {
-            state.tax_id.to_string()
+            state.profile.tax_id.to_string()
         }))
         .padding(10.0)
         .expand()
@@ -98,8 +95,8 @@ fn build_home() -> impl Widget<State> {
 
 fn build_home_item(
     title: &str,
-    f: impl Fn(&State) -> String + 'static + Copy,
-) -> impl Widget<State> {
+    f: impl Fn(&AppState) -> String + 'static + Copy,
+) -> impl Widget<AppState> {
     Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .main_axis_alignment(MainAxisAlignment::SpaceBetween)
@@ -108,26 +105,26 @@ fn build_home_item(
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .with_child(
-                    Flex::row().with_child(Label::new(move |state: &State, _env: &_| f(state))),
+                    Flex::row().with_child(Label::new(move |state: &AppState, _env: &_| f(state))),
                 )
                 .with_child(Label::new(title).with_text_size(12.0)),
         )
         .with_child(
             Button::new("Kopieren")
-                .on_click(move |_ctx, state: &mut State, _env| copy_to_clipboard(f(state))),
+                .on_click(move |_ctx, state: &mut AppState, _env| copy_to_clipboard(f(state))),
         )
         .padding(10.0)
 }
 
-fn build_bank_account_page() -> impl Widget<State> {
+fn build_bank_account_page() -> impl Widget<AppState> {
     List::new(|| build_bank_account())
         .with_spacing(10.0)
-        .lens(State::bank_accounts)
+        .lens(AppState::profile.then(ProfileState::bank_accounts))
         .padding(10.0)
         .expand()
 }
 
-fn build_bank_account() -> impl Widget<BankAccount> {
+fn build_bank_account() -> impl Widget<BankAccountState> {
     Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .main_axis_alignment(MainAxisAlignment::SpaceBetween)
@@ -135,22 +132,21 @@ fn build_bank_account() -> impl Widget<BankAccount> {
         .with_child(
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Label::dynamic(|account: &BankAccount, _env| {
+                .with_child(Label::dynamic(|account: &BankAccountState, _env| {
                     account.iban.clone()
                 }))
                 .with_child(
-                    Label::dynamic(|account: &BankAccount, _env| account.name.clone())
+                    Label::dynamic(|account: &BankAccountState, _env| account.name.clone())
                         .with_text_size(12.0),
                 ),
         )
         .with_child(
             Button::new("Onlinebanking")
-                .on_click(|_ctx, account: &mut BankAccount, _env| open_url(&account.url)),
+                .on_click(|_ctx, account: &mut BankAccountState, _env| open_url(&account.url)),
         )
-        .with_child(
-            Button::new("IBAN Kopieren")
-                .on_click(|_ctx, account: &mut BankAccount, _env| copy_to_clipboard(&account.iban)),
-        )
+        .with_child(Button::new("IBAN Kopieren").on_click(
+            |_ctx, account: &mut BankAccountState, _env| copy_to_clipboard(&account.iban),
+        ))
         .padding(10.0)
 }
 
@@ -168,12 +164,8 @@ fn main() -> Result<(), PlatformError> {
         .parse::<Profile>()
         .expect("Could not read the profile");
 
-    let initial_state = State {
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        social_security_number: profile.social_security_number,
-        tax_id: profile.tax_id,
-        bank_accounts: Vector::from(profile.bank_accounts),
+    let initial_state = AppState {
+        profile: ProfileState::from(profile),
         nav: Nav::Home,
     };
 

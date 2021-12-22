@@ -7,12 +7,27 @@ pub struct TaxId {
     value: u64,
 }
 
+const MIN_TAX_ID: u64 = 10_000_000_000;
+const MAX_TAX_ID: u64 = 99_999_999_999;
+
 impl TryFrom<u64> for TaxId {
     type Error = String;
 
     fn try_from(value: u64) -> Result<Self, Self::Error> {
         // todo: find correct constraints and enforce in here
-        Ok(TaxId { value })
+        if value < MIN_TAX_ID {
+            return Err(format!(
+                "Tax-ID to small: must have exactly 11 digits {}",
+                value
+            ));
+        } else if value > MAX_TAX_ID {
+            return Err(format!(
+                "Tax-ID to large: must have exactly 11 digits {}",
+                value
+            ));
+        } else {
+            Ok(TaxId { value })
+        }
     }
 }
 

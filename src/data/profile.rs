@@ -1,13 +1,12 @@
-use druid::{Data, Lens};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::str::FromStr;
 
-use crate::social_security_number::SocialSecurityNumber;
-use crate::tax_id::TaxId;
+use super::social_security_number::SocialSecurityNumber;
+use super::tax_id::TaxId;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Lens, Data)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct BankAccount {
     pub name: String,
     pub iban: String,
