@@ -1,6 +1,6 @@
-# Stammdaten
+# stammdaten
 
-A simple gui based on [`druid`](https://github.com/linebender/druid) to manage basic personal data.
+A simple GUI based on [`druid`](https://github.com/linebender/druid) to display basic personal data.
 
 ## Installation
 
