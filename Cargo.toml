@@ -1,0 +1,19 @@
+[package]
+name = "de_data"
+version = "0.1.0"
+edition = "2021"
+description = "manage basic administration data"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clipboard = "0.5.0"
+druid = { version = "0.7.0", features = ["svg"] }
+serde = { version = "1.0.132", features = ["derive"] }
+serde_json = "1.0.73"
+tempfile = "3"
+
+[package.metadata.bundle]
+name = "Stammdaten"
+identifier = "io.github.flxbe.de_data"
+short_description = "Stammdaten"
