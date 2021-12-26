@@ -18,6 +18,7 @@ Then, the file `data.json` must be created in the project root folder:
   "last_name": "Last Name",
   "social_security_number": "some_value",
   "tax_id": 12312312312,
+  "post_number": 123456789,
   "bank_accounts": [
     {
       "name": "Some Account Name",

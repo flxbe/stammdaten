@@ -4,7 +4,7 @@
 //! The main advantage of this is to separate the data format between
 //! the ser/de and the ui modules.
 
-use crate::data::{BankAccount, Profile, SocialSecurityNumber, TaxId};
+use crate::data::{BankAccount, Profile, SocialSecurityNumber, TaxId, PostNumber};
 use druid::im::Vector;
 use druid::{Data, Lens};
 use std::convert::From;
@@ -40,6 +40,8 @@ pub struct ProfileState {
     pub social_security_number: SocialSecurityNumber,
     #[data(same_fn = "PartialEq::eq")]
     pub tax_id: TaxId,
+    #[data(same_fn = "PartialEq::eq")]
+    pub post_number: PostNumber,
     pub bank_accounts: Vector<BankAccountState>,
 }
 
@@ -50,6 +52,7 @@ impl From<Profile> for ProfileState {
             last_name: profile.last_name,
             social_security_number: profile.social_security_number,
             tax_id: profile.tax_id,
+            post_number: profile.post_number,
             bank_accounts: profile
                 .bank_accounts
                 .into_iter()
