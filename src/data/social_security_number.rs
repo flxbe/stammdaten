@@ -5,6 +5,7 @@ use std::convert::TryFrom;
 #[derive(Serialize, Deserialize, Copy, Clone, PartialEq, Eq, Debug)]
 enum RegionCode {
     BundBraunschweigHannover = 50,
+    SchleswigHolstein = 26,
 }
 
 impl TryFrom<&str> for RegionCode {
@@ -13,6 +14,7 @@ impl TryFrom<&str> for RegionCode {
     fn try_from(v: &str) -> Result<Self, Self::Error> {
         match v {
             "50" => Ok(Self::BundBraunschweigHannover),
+            "26" => Ok(Self::SchleswigHolstein),
             _ => Err(format!("Invalid Region Code: {}", v)),
         }
     }
@@ -112,9 +114,16 @@ mod test {
     }
 
     #[test]
-    fn should_correctly_print_the_social_security_number() {
+    fn should_correctly_print_the_social_security_number_for_bund_braunschweig_hannover() {
         let value = SocialSecurityNumber::try_from("50 010 101 N012").unwrap();
 
         assert_eq!(value.to_string(), "50 010101 N012")
+    }
+
+    #[test]
+    fn should_correctly_print_the_social_security_number_for_schleswig_holstein() {
+        let value = SocialSecurityNumber::try_from("26 010 101 N012").unwrap();
+
+        assert_eq!(value.to_string(), "26 010101 N012")
     }
 }
