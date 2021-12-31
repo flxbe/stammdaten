@@ -5,6 +5,7 @@ use std::str::FromStr;
 
 use super::social_security_number::SocialSecurityNumber;
 use super::tax_id::TaxId;
+use super::post_number::PostNumber;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct BankAccount {
@@ -18,6 +19,7 @@ pub struct Profile {
     pub first_name: String,
     pub last_name: String,
     pub social_security_number: SocialSecurityNumber,
+    pub post_number: PostNumber,
     pub tax_id: TaxId,
     pub bank_accounts: Vec<BankAccount>,
 }
@@ -59,6 +61,7 @@ mod test {
             last_name: "Name".into(),
             social_security_number: SocialSecurityNumber::try_from("50 010101 N012").unwrap(),
             tax_id: TaxId::try_from(12_123_456_789).unwrap(),
+            post_number: PostNumber::try_from(123_456_789).unwrap(),
             bank_accounts: vec![BankAccount {
                 name: "Some Account Name".into(),
                 iban: "DE10 1010 1010 1010 1010 10".into(),

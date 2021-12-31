@@ -89,6 +89,10 @@ fn build_home() -> impl Widget<AppState> {
         .with_child(build_home_item("Steuer-ID", |state| {
             state.profile.tax_id.to_string()
         }))
+        .with_default_spacer()
+        .with_child(build_home_item("Postnummer", |state| {
+            state.profile.post_number.to_string()
+        }))
         .padding(10.0)
         .expand()
 }
