@@ -16,6 +16,10 @@ Then, the file `data.json` must be created in the project root folder:
 {
   "first_name": "First Name",
   "last_name": "Last Name",
+  "id_card": {
+    "card_number": "12W45678H",
+    "expires_after": "2099-01-01T23:59:59Z"
+  },
   "social_security_number": "some_value",
   "tax_id": 12312312312,
   "post_number": 123456789,

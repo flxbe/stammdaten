@@ -1,11 +1,11 @@
+use super::id_card::IdCard;
+use super::post_number::PostNumber;
+use super::social_security_number::SocialSecurityNumber;
+use super::tax_id::TaxId;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{self, Read, Write};
 use std::str::FromStr;
-
-use super::social_security_number::SocialSecurityNumber;
-use super::tax_id::TaxId;
-use super::post_number::PostNumber;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct BankAccount {
@@ -18,6 +18,7 @@ pub struct BankAccount {
 pub struct Profile {
     pub first_name: String,
     pub last_name: String,
+    pub id_card: IdCard,
     pub social_security_number: SocialSecurityNumber,
     pub post_number: PostNumber,
     pub tax_id: TaxId,
@@ -51,7 +52,9 @@ impl FromStr for Profile {
 
 #[cfg(test)]
 mod test {
+    use super::super::id_card::IdCardNumber;
     use super::*;
+    use chrono::prelude::*;
     use std::io::Seek;
 
     #[test]
@@ -59,6 +62,10 @@ mod test {
         let profile = Profile {
             first_name: "Test".into(),
             last_name: "Name".into(),
+            id_card: IdCard {
+                card_number: IdCardNumber::try_from("48328FGW9").unwrap(),
+                expires_after: Utc::now(),
+            },
             social_security_number: SocialSecurityNumber::try_from("50 010101 N012").unwrap(),
             tax_id: TaxId::try_from(12_123_456_789).unwrap(),
             post_number: PostNumber::try_from(123_456_789).unwrap(),
