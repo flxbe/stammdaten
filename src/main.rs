@@ -82,6 +82,8 @@ fn sidebar_link_widget(title: &str, link_nav: Nav) -> impl Widget<AppState> {
 fn build_home() -> impl Widget<AppState> {
     Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Start)
+        .with_child(build_id_card_item())
+        .with_default_spacer()
         .with_child(build_home_item("Sozialversicherungsnummer", |state| {
             state.profile.social_security_number.to_string()
         }))
@@ -95,6 +97,37 @@ fn build_home() -> impl Widget<AppState> {
         }))
         .padding(10.0)
         .expand()
+}
+
+fn build_id_card_item() -> impl Widget<AppState> {
+    Flex::row()
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .main_axis_alignment(MainAxisAlignment::SpaceBetween)
+        .must_fill_main_axis(true)
+        .with_child(
+            Flex::column()
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .with_child(
+                    Flex::row().with_child(Label::dynamic(|state: &AppState, _env| {
+                        state.profile.id_card.card_number.to_string()
+                    })),
+                )
+                .with_child(
+                    Label::dynamic(|state: &AppState, _env| {
+                        format!(
+                            "Personalsausweis - {} Tage gültig",
+                            state.profile.id_card.time_until_expiration().num_days()
+                        )
+                    })
+                    .with_text_size(12.0),
+                ),
+        )
+        .with_child(OutlineButton::new("Kopieren").on_click(
+            move |_ctx, state: &mut AppState, _env| {
+                copy_to_clipboard(state.profile.id_card.card_number.to_string())
+            },
+        ))
+        .padding(10.0)
 }
 
 fn build_home_item(
