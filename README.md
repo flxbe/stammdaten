@@ -1,4 +1,4 @@
-# stammdaten
+# Stammdaten
 
 A simple GUI based on [`druid`](https://github.com/linebender/druid) to display basic personal data.
 
@@ -33,7 +33,7 @@ Then, the file `data.json` must be created in the project root folder:
 }
 ```
 
-Add the region code of your social security number in `social_security_numbers.rs` in the enum and also in its validation `ReyFrom<&str> for RegionCode`.
+Add the region code of your social security number in `social_security_numbers.rs` in the enum and also in its validation `|TryFrom<&str> for RegionCode`.
 
 Finally, the application can be bundled and installed:
 
