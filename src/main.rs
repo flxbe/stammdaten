@@ -2,7 +2,7 @@ mod data;
 mod state;
 mod widgets;
 
-use crate::data::Profile;
+use crate::data::{PostNumber, Profile};
 use crate::state::{AppState, BankAccountState, Nav, ProfileState};
 use crate::widgets::{NavController, OutlineButton, NAVIGATE};
 use clipboard::{ClipboardContext, ClipboardProvider};
@@ -10,7 +10,9 @@ use druid::widget::{
     CrossAxisAlignment, Flex, Label, List, MainAxisAlignment, SizedBox, Split, Svg, SvgData,
     ViewSwitcher,
 };
-use druid::{theme, AppLauncher, LensExt, PlatformError, Widget, WidgetExt, WindowDesc};
+use druid::{
+    theme, AppLauncher, Env, EventCtx, Lens, PlatformError, Widget, WidgetExt, WindowDesc,
+};
 use webbrowser;
 
 fn build_ui() -> impl Widget<AppState> {
@@ -23,8 +25,8 @@ fn build_ui() -> impl Widget<AppState> {
     let main = ViewSwitcher::new(
         |state: &AppState, _env| state.nav,
         |nav, _state, _env| match nav {
-            Nav::Home => Box::new(build_home()),
-            Nav::BankAccounts => Box::new(build_bank_account_page()),
+            Nav::Home => Box::new(build_home().lens(AppState::profile)),
+            Nav::BankAccounts => Box::new(build_bank_account_page().lens(AppState::profile)),
         },
     )
     .background(theme::BACKGROUND_DARK)
@@ -79,27 +81,30 @@ fn sidebar_link_widget(title: &str, link_nav: Nav) -> impl Widget<AppState> {
         .on_click(move |ctx, _, _| ctx.submit_command(NAVIGATE.with(link_nav)))
 }
 
-fn build_home() -> impl Widget<AppState> {
+fn build_home() -> impl Widget<ProfileState> {
     Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Start)
         .with_child(build_id_card_item())
         .with_default_spacer()
         .with_child(build_home_item("Sozialversicherungsnummer", |state| {
-            state.profile.social_security_number.to_string()
+            state.social_security_number.to_string()
         }))
         .with_default_spacer()
         .with_child(build_home_item("Steuer-ID", |state| {
-            state.profile.tax_id.to_string()
+            state.tax_id.to_string()
         }))
         .with_default_spacer()
-        .with_child(build_home_item("Postnummer", |state| {
-            state.profile.post_number.to_string()
-        }))
+        .with_child(
+            build_optional_item(String::from("Postnummer"), |_ctx, state, _env| {
+                *state = Some(PostNumber::try_from(123456789).unwrap())
+            })
+            .lens(ProfileState::post_number),
+        )
         .padding(10.0)
         .expand()
 }
 
-fn build_id_card_item() -> impl Widget<AppState> {
+fn build_id_card_item() -> impl Widget<ProfileState> {
     Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .main_axis_alignment(MainAxisAlignment::SpaceBetween)
@@ -108,23 +113,24 @@ fn build_id_card_item() -> impl Widget<AppState> {
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .with_child(
-                    Flex::row().with_child(Label::dynamic(|state: &AppState, _env| {
-                        state.profile.id_card.card_number.to_string()
+                    Flex::row().with_child(Label::dynamic(|state: &ProfileState, _env| {
+                        state.id_card.card_number.to_string()
                     })),
                 )
                 .with_child(
-                    Label::dynamic(|state: &AppState, _env| {
+                    Label::dynamic(|state: &ProfileState, _env| {
                         format!(
                             "Personalsausweis - {} Tage gültig",
-                            state.profile.id_card.time_until_expiration().num_days()
+                            state.id_card.time_until_expiration().num_days()
                         )
                     })
                     .with_text_size(12.0),
                 ),
         )
         .with_child(OutlineButton::new("Kopieren").on_click(
-            move |_ctx, state: &mut AppState, _env| {
-                copy_to_clipboard(state.profile.id_card.card_number.to_string())
+            move |_ctx, state: &mut ProfileState, _env| {
+                state.first_name = String::from("lol");
+                copy_to_clipboard(state.id_card.card_number.to_string())
             },
         ))
         .padding(10.0)
@@ -132,8 +138,8 @@ fn build_id_card_item() -> impl Widget<AppState> {
 
 fn build_home_item(
     title: &str,
-    f: impl Fn(&AppState) -> String + 'static + Copy,
-) -> impl Widget<AppState> {
+    f: impl Fn(&ProfileState) -> String + 'static + Copy,
+) -> impl Widget<ProfileState> {
     Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .main_axis_alignment(MainAxisAlignment::SpaceBetween)
@@ -141,22 +147,90 @@ fn build_home_item(
         .with_child(
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(
-                    Flex::row().with_child(Label::new(move |state: &AppState, _env: &_| f(state))),
-                )
+                .with_child(Label::new(move |state: &ProfileState, _env: &_| f(state)))
                 .with_child(Label::new(title).with_text_size(12.0)),
         )
         .with_child(
             OutlineButton::new("Kopieren")
-                .on_click(move |_ctx, state: &mut AppState, _env| copy_to_clipboard(f(state))),
+                .on_click(move |_ctx, state: &mut ProfileState, _env| copy_to_clipboard(f(state))),
         )
         .padding(10.0)
 }
 
-fn build_bank_account_page() -> impl Widget<AppState> {
+struct SomeLens;
+
+impl<T> Lens<Option<T>, T> for SomeLens {
+    fn with<V, F: FnOnce(&T) -> V>(&self, data: &Option<T>, f: F) -> V {
+        f(data.as_ref().unwrap())
+    }
+
+    fn with_mut<V, F: FnOnce(&mut T) -> V>(&self, data: &mut Option<T>, f: F) -> V {
+        f(data.as_mut().unwrap())
+    }
+}
+
+fn build_optional_item<T>(
+    title: String,
+    on_create: impl Fn(&mut EventCtx, &mut Option<T>, &Env) + 'static + Copy,
+) -> impl Widget<Option<T>>
+where
+    T: Into<String> + druid::Data,
+{
+    ViewSwitcher::new(
+        |state: &Option<T>, _env| state.is_some(),
+        move |state, _state, _env| match state {
+            true => Box::new(build_item(&title).lens(SomeLens)),
+            false => Box::new(build_add_button(&title, on_create)),
+        },
+    )
+}
+
+fn build_add_button<T>(
+    title: &str,
+    on_create: impl Fn(&mut EventCtx, &mut Option<T>, &Env) + 'static,
+) -> impl Widget<Option<T>>
+where
+    T: Into<String> + druid::Data,
+{
+    Flex::row()
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .main_axis_alignment(MainAxisAlignment::SpaceBetween)
+        .must_fill_main_axis(true)
+        .with_child(
+            Flex::column()
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .with_child(Flex::row().with_child(Label::new("...")))
+                .with_child(Label::new(title).with_text_size(12.0)),
+        )
+        .with_child(OutlineButton::new("Erstellen").on_click(on_create))
+        .padding(10.0)
+}
+
+fn build_item<T>(title: &str) -> impl Widget<T>
+where
+    T: Into<String> + druid::Data,
+{
+    Flex::row()
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .main_axis_alignment(MainAxisAlignment::SpaceBetween)
+        .must_fill_main_axis(true)
+        .with_child(
+            Flex::column()
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .with_child(Label::new(move |state: &T, _env: &_| state.clone().into()))
+                .with_child(Label::new(title).with_text_size(12.0)),
+        )
+        .with_child(
+            OutlineButton::new("Kopieren")
+                .on_click(move |_ctx, state: &mut T, _env| copy_to_clipboard(state.clone().into())),
+        )
+        .padding(10.0)
+}
+
+fn build_bank_account_page() -> impl Widget<ProfileState> {
     List::new(|| build_bank_account())
         .with_spacing(10.0)
-        .lens(AppState::profile.then(ProfileState::bank_accounts))
+        .lens(ProfileState::bank_accounts)
         .padding(10.0)
         .expand()
 }

@@ -10,7 +10,6 @@ pub struct PostNumber {
 const MIN_POST_NUMBER: u32 = 100_000_000;
 const MAX_POST_NUMBER: u32 = 999_999_999;
 
-
 impl TryFrom<u32> for PostNumber {
     type Error = String;
 
@@ -38,25 +37,31 @@ impl Into<u32> for PostNumber {
     }
 }
 
+impl Into<String> for PostNumber {
+    fn into(self) -> String {
+        self.to_string()
+    }
+}
+
 impl PostNumber {
     pub fn to_string(&self) -> String {
         let post_number_as_string = format!("{}", self.value);
-        return format!("{} {} {}", &post_number_as_string[..3], 
-                                   &post_number_as_string[3..6], 
-                                   &post_number_as_string[6..9]);
+        return format!(
+            "{} {} {}",
+            &post_number_as_string[..3],
+            &post_number_as_string[3..6],
+            &post_number_as_string[6..9]
+        );
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    
     #[test]
     fn should_correctly_cast_to_string() {
-        let post_number = PostNumber{ value: 123456789};
+        let post_number = PostNumber { value: 123456789 };
 
         assert_eq!("123 456 789", post_number.to_string());
     }
 }
-
-

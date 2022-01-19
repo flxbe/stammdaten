@@ -20,7 +20,7 @@ pub struct Profile {
     pub last_name: String,
     pub id_card: IdCard,
     pub social_security_number: SocialSecurityNumber,
-    pub post_number: PostNumber,
+    pub post_number: Option<PostNumber>,
     pub tax_id: TaxId,
     pub bank_accounts: Vec<BankAccount>,
 }
@@ -68,7 +68,7 @@ mod test {
             },
             social_security_number: SocialSecurityNumber::try_from("50 010101 N012").unwrap(),
             tax_id: TaxId::try_from(12_123_456_789).unwrap(),
-            post_number: PostNumber::try_from(123_456_789).unwrap(),
+            post_number: Some(PostNumber::try_from(123_456_789).unwrap()),
             bank_accounts: vec![BankAccount {
                 name: "Some Account Name".into(),
                 iban: "DE10 1010 1010 1010 1010 10".into(),

@@ -42,9 +42,14 @@ pub struct ProfileState {
     pub social_security_number: SocialSecurityNumber,
     #[data(same_fn = "PartialEq::eq")]
     pub tax_id: TaxId,
-    #[data(same_fn = "PartialEq::eq")]
-    pub post_number: PostNumber,
+    pub post_number: Option<PostNumber>,
     pub bank_accounts: Vector<BankAccountState>,
+}
+
+impl Data for PostNumber {
+    fn same(&self, right: &Self) -> bool {
+        return self == right;
+    }
 }
 
 impl From<Profile> for ProfileState {
