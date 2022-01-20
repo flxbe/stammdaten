@@ -2,7 +2,9 @@ mod data;
 mod state;
 mod widgets;
 
-use crate::data::{PostNumber, Profile};
+extern crate druid;
+
+use crate::data::{IdCard, Name, PostNumber, Profile};
 use crate::state::{AppState, BankAccountState, Nav, ProfileState};
 use crate::widgets::{NavController, OutlineButton, NAVIGATE};
 use clipboard::{ClipboardContext, ClipboardProvider};
@@ -11,14 +13,14 @@ use druid::widget::{
     ViewSwitcher,
 };
 use druid::{
-    theme, AppLauncher, Env, EventCtx, Lens, PlatformError, Widget, WidgetExt, WindowDesc,
+    theme, AppLauncher, Env, EventCtx, Lens, LensExt, PlatformError, Widget, WidgetExt, WindowDesc,
 };
 use webbrowser;
 
 fn build_ui() -> impl Widget<AppState> {
     let sidebar = Flex::column()
         .must_fill_main_axis(true)
-        .with_child(build_sidebar_header())
+        .with_child(build_sidebar_header().lens(AppState::profile.then(ProfileState::name)))
         .with_child(build_sidebar_navigation())
         .background(theme::BACKGROUND_LIGHT);
 
@@ -41,7 +43,7 @@ fn build_ui() -> impl Widget<AppState> {
         .controller(NavController)
 }
 
-fn build_sidebar_header() -> impl Widget<AppState> {
+fn build_sidebar_header() -> impl Widget<Name> {
     let profile_svg = include_str!("profile-svgrepo-com.svg")
         .parse::<SvgData>()
         .unwrap();
@@ -57,8 +59,8 @@ fn build_sidebar_header() -> impl Widget<AppState> {
         .with_child(
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Label::new(|state: &AppState, _env: &_| {
-                    format!("{} {}", state.profile.first_name, state.profile.last_name)
+                .with_child(Label::new(|state: &Name, _env: &_| {
+                    format!("{} {}", state.first_name, state.last_name)
                 })),
         )
         .expand_width()
@@ -84,15 +86,20 @@ fn sidebar_link_widget(title: &str, link_nav: Nav) -> impl Widget<AppState> {
 fn build_home() -> impl Widget<ProfileState> {
     Flex::column()
         .cross_axis_alignment(CrossAxisAlignment::Start)
-        .with_child(build_id_card_item())
+        .with_child(build_optional_id_card().lens(ProfileState::id_card))
         .with_default_spacer()
-        .with_child(build_home_item("Sozialversicherungsnummer", |state| {
-            state.social_security_number.to_string()
-        }))
+        .with_child(
+            build_optional_item(
+                String::from("Sozialversichersungsnummer"),
+                |_ctx, _state, _env| {},
+            )
+            .lens(ProfileState::social_security_number),
+        )
         .with_default_spacer()
-        .with_child(build_home_item("Steuer-ID", |state| {
-            state.tax_id.to_string()
-        }))
+        .with_child(
+            build_optional_item(String::from("Steuer-ID"), |_ctx, _state, _env| {})
+                .lens(ProfileState::tax_id),
+        )
         .with_default_spacer()
         .with_child(
             build_optional_item(String::from("Postnummer"), |_ctx, state, _env| {
@@ -104,7 +111,17 @@ fn build_home() -> impl Widget<ProfileState> {
         .expand()
 }
 
-fn build_id_card_item() -> impl Widget<ProfileState> {
+fn build_optional_id_card() -> impl Widget<Option<IdCard>> {
+    ViewSwitcher::new(
+        |state: &Option<IdCard>, _env| state.is_some(),
+        move |state, _state, _env| match state {
+            true => Box::new(build_id_card_item().lens(SomeLens)),
+            false => Box::new(build_add_button("Personalausweis".into(), |_, _, _| {})),
+        },
+    )
+}
+
+fn build_id_card_item() -> impl Widget<IdCard> {
     Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .main_axis_alignment(MainAxisAlignment::SpaceBetween)
@@ -113,47 +130,23 @@ fn build_id_card_item() -> impl Widget<ProfileState> {
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
                 .with_child(
-                    Flex::row().with_child(Label::dynamic(|state: &ProfileState, _env| {
-                        state.id_card.card_number.to_string()
+                    Flex::row().with_child(Label::dynamic(|state: &IdCard, _env| {
+                        state.card_number.to_string()
                     })),
                 )
                 .with_child(
-                    Label::dynamic(|state: &ProfileState, _env| {
+                    Label::dynamic(|state: &IdCard, _env| {
                         format!(
                             "Personalsausweis - {} Tage gültig",
-                            state.id_card.time_until_expiration().num_days()
+                            state.time_until_expiration().num_days()
                         )
                     })
                     .with_text_size(12.0),
                 ),
         )
         .with_child(OutlineButton::new("Kopieren").on_click(
-            move |_ctx, state: &mut ProfileState, _env| {
-                state.first_name = String::from("lol");
-                copy_to_clipboard(state.id_card.card_number.to_string())
-            },
+            move |_ctx, state: &mut IdCard, _env| copy_to_clipboard(state.card_number.to_string()),
         ))
-        .padding(10.0)
-}
-
-fn build_home_item(
-    title: &str,
-    f: impl Fn(&ProfileState) -> String + 'static + Copy,
-) -> impl Widget<ProfileState> {
-    Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .main_axis_alignment(MainAxisAlignment::SpaceBetween)
-        .must_fill_main_axis(true)
-        .with_child(
-            Flex::column()
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Label::new(move |state: &ProfileState, _env: &_| f(state)))
-                .with_child(Label::new(title).with_text_size(12.0)),
-        )
-        .with_child(
-            OutlineButton::new("Kopieren")
-                .on_click(move |_ctx, state: &mut ProfileState, _env| copy_to_clipboard(f(state))),
-        )
         .padding(10.0)
 }
 
@@ -190,7 +183,7 @@ fn build_add_button<T>(
     on_create: impl Fn(&mut EventCtx, &mut Option<T>, &Env) + 'static,
 ) -> impl Widget<Option<T>>
 where
-    T: Into<String> + druid::Data,
+    T: druid::Data,
 {
     Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)

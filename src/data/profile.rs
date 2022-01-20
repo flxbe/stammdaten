@@ -7,6 +7,12 @@ use std::fs::File;
 use std::io::{self, Read, Write};
 use std::str::FromStr;
 
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
+pub struct Name {
+    pub first_name: String,
+    pub last_name: String,
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct BankAccount {
     pub name: String,
@@ -16,12 +22,11 @@ pub struct BankAccount {
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Profile {
-    pub first_name: String,
-    pub last_name: String,
-    pub id_card: IdCard,
-    pub social_security_number: SocialSecurityNumber,
+    pub name: Name,
+    pub id_card: Option<IdCard>,
+    pub social_security_number: Option<SocialSecurityNumber>,
     pub post_number: Option<PostNumber>,
-    pub tax_id: TaxId,
+    pub tax_id: Option<TaxId>,
     pub bank_accounts: Vec<BankAccount>,
 }
 
@@ -60,14 +65,16 @@ mod test {
     #[test]
     fn should_correctly_save_the_profile_to_disk() {
         let profile = Profile {
-            first_name: "Test".into(),
-            last_name: "Name".into(),
-            id_card: IdCard {
+            name: Name {
+                first_name: "Test".into(),
+                last_name: "Name".into(),
+            },
+            id_card: Some(IdCard {
                 card_number: IdCardNumber::try_from("48328FGW9").unwrap(),
                 expires_after: Utc::now(),
-            },
-            social_security_number: SocialSecurityNumber::try_from("50 010101 N012").unwrap(),
-            tax_id: TaxId::try_from(12_123_456_789).unwrap(),
+            }),
+            social_security_number: Some(SocialSecurityNumber::try_from("50 010101 N012").unwrap()),
+            tax_id: Some(TaxId::try_from(12_123_456_789).unwrap()),
             post_number: Some(PostNumber::try_from(123_456_789).unwrap()),
             bank_accounts: vec![BankAccount {
                 name: "Some Account Name".into(),

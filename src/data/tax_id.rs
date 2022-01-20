@@ -37,6 +37,12 @@ impl Into<u64> for TaxId {
     }
 }
 
+impl Into<String> for TaxId {
+    fn into(self) -> String {
+        self.to_string()
+    }
+}
+
 impl TaxId {
     pub fn to_string(&self) -> String {
         return format!("{}", self.value);

@@ -4,7 +4,7 @@
 //! The main advantage of this is to separate the data format between
 //! the ser/de and the ui modules.
 
-use crate::data::{BankAccount, IdCard, PostNumber, Profile, SocialSecurityNumber, TaxId};
+use crate::data::{BankAccount, IdCard, Name, PostNumber, Profile, SocialSecurityNumber, TaxId};
 use druid::im::Vector;
 use druid::{Data, Lens};
 use std::convert::From;
@@ -34,29 +34,35 @@ impl From<BankAccount> for BankAccountState {
 
 #[derive(Clone, Data, Lens)]
 pub struct ProfileState {
-    pub first_name: String,
-    pub last_name: String,
-    #[data(same_fn = "PartialEq::eq")]
-    pub id_card: IdCard,
-    #[data(same_fn = "PartialEq::eq")]
-    pub social_security_number: SocialSecurityNumber,
-    #[data(same_fn = "PartialEq::eq")]
-    pub tax_id: TaxId,
+    pub name: Name,
+    pub id_card: Option<IdCard>,
+    pub social_security_number: Option<SocialSecurityNumber>,
+    pub tax_id: Option<TaxId>,
     pub post_number: Option<PostNumber>,
     pub bank_accounts: Vector<BankAccountState>,
 }
 
-impl Data for PostNumber {
-    fn same(&self, right: &Self) -> bool {
-        return self == right;
-    }
+/// Macro to impl the `Data` trait for structs with the `Eq` trait.
+macro_rules! impl_data_simple {
+    ($t:ty) => {
+        impl Data for $t {
+            fn same(&self, other: &Self) -> bool {
+                self == other
+            }
+        }
+    };
 }
+
+impl_data_simple!(Name);
+impl_data_simple!(IdCard);
+impl_data_simple!(SocialSecurityNumber);
+impl_data_simple!(TaxId);
+impl_data_simple!(PostNumber);
 
 impl From<Profile> for ProfileState {
     fn from(profile: Profile) -> ProfileState {
         ProfileState {
-            first_name: profile.first_name,
-            last_name: profile.last_name,
+            name: profile.name,
             id_card: profile.id_card,
             social_security_number: profile.social_security_number,
             tax_id: profile.tax_id,
