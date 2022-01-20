@@ -8,6 +8,7 @@ use crate::data::{BankAccount, IdCard, Name, PostNumber, Profile, SocialSecurity
 use druid::im::Vector;
 use druid::{Data, Lens};
 use std::convert::From;
+use std::sync::Arc;
 
 #[derive(Clone, Copy, Data, PartialEq)]
 pub enum Nav {
@@ -77,7 +78,38 @@ impl From<Profile> for ProfileState {
 }
 
 #[derive(Clone, Data, Lens)]
-pub struct AppState {
+pub struct MainState {
     pub profile: ProfileState,
     pub nav: Nav,
+}
+
+#[derive(Clone, Data, Lens, Default)]
+pub struct CreateState {
+    pub first_name: Arc<String>,
+    pub last_name: Arc<String>,
+}
+
+#[derive(Clone, Data, Lens)]
+pub struct AppState {
+    pub main: Option<MainState>,
+    pub create: CreateState,
+}
+
+impl AppState {
+    pub fn new() -> AppState {
+        AppState {
+            main: None,
+            create: CreateState::default(),
+        }
+    }
+
+    pub fn from_profile(profile: Profile) -> AppState {
+        AppState {
+            main: Some(MainState {
+                profile: ProfileState::from(profile),
+                nav: Nav::Home,
+            }),
+            create: CreateState::default(),
+        }
+    }
 }

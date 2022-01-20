@@ -31,6 +31,19 @@ pub struct Profile {
 }
 
 impl Profile {
+    pub fn new(first_name: String, last_name: String) -> Profile {
+        Profile {
+            name: Name {
+                first_name,
+                last_name,
+            },
+            id_card: None,
+            social_security_number: None,
+            post_number: None,
+            tax_id: None,
+            bank_accounts: vec![],
+        }
+    }
     pub fn load_from_file(file: &mut File) -> io::Result<Profile> {
         let mut data = String::new();
         file.read_to_string(&mut data)?;

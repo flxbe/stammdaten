@@ -1,4 +1,4 @@
-use crate::state::{AppState, Nav};
+use crate::state::{MainState, Nav};
 use druid::widget::{Controller, Widget};
 use druid::{Env, Event, EventCtx, Selector};
 
@@ -6,16 +6,16 @@ pub const NAVIGATE: Selector<Nav> = Selector::new("app.navigate");
 
 pub struct NavController;
 
-impl<W> Controller<AppState, W> for NavController
+impl<W> Controller<MainState, W> for NavController
 where
-    W: Widget<AppState>,
+    W: Widget<MainState>,
 {
     fn event(
         &mut self,
         child: &mut W,
         ctx: &mut EventCtx,
         event: &Event,
-        data: &mut AppState,
+        data: &mut MainState,
         env: &Env,
     ) {
         match event {
