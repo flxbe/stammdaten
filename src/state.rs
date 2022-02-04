@@ -10,39 +10,6 @@ use druid::{Data, Lens};
 use std::convert::From;
 use std::sync::Arc;
 
-#[derive(Clone, Copy, Data, PartialEq)]
-pub enum Nav {
-    Home,
-    BankAccounts,
-}
-
-#[derive(Clone, Data, Lens)]
-pub struct BankAccountState {
-    pub name: String,
-    pub iban: String,
-    pub url: String,
-}
-
-impl From<BankAccount> for BankAccountState {
-    fn from(account: BankAccount) -> BankAccountState {
-        BankAccountState {
-            name: account.name,
-            iban: account.iban,
-            url: account.url,
-        }
-    }
-}
-
-#[derive(Clone, Data, Lens)]
-pub struct ProfileState {
-    pub name: Name,
-    pub id_card: Option<IdCard>,
-    pub social_security_number: Option<SocialSecurityNumber>,
-    pub tax_id: Option<TaxId>,
-    pub post_number: Option<PostNumber>,
-    pub bank_accounts: Vector<BankAccountState>,
-}
-
 /// Macro to impl the `Data` trait for structs with the `Eq` trait.
 macro_rules! impl_data_simple {
     ($t:ty) => {
@@ -59,6 +26,36 @@ impl_data_simple!(IdCard);
 impl_data_simple!(SocialSecurityNumber);
 impl_data_simple!(TaxId);
 impl_data_simple!(PostNumber);
+impl_data_simple!(BankAccount);
+
+#[derive(Clone, Copy, Data, PartialEq)]
+pub enum Nav {
+    Home,
+    BankAccounts,
+}
+
+#[derive(Clone, Data, Lens)]
+pub struct ProfileState {
+    pub name: Name,
+    pub id_card: Option<IdCard>,
+    pub social_security_number: Option<SocialSecurityNumber>,
+    pub tax_id: Option<TaxId>,
+    pub post_number: Option<PostNumber>,
+    pub bank_accounts: Vector<BankAccount>,
+}
+
+impl ProfileState {
+    fn get_profile(&self) -> Profile {
+        Profile {
+            name: self.name.clone(),
+            id_card: self.id_card.clone(),
+            social_security_number: self.social_security_number.clone(),
+            tax_id: self.tax_id.clone(),
+            post_number: self.post_number.clone(),
+            bank_accounts: self.bank_accounts.clone().into_iter().collect(),
+        }
+    }
+}
 
 impl From<Profile> for ProfileState {
     fn from(profile: Profile) -> ProfileState {
@@ -68,11 +65,7 @@ impl From<Profile> for ProfileState {
             social_security_number: profile.social_security_number,
             tax_id: profile.tax_id,
             post_number: profile.post_number,
-            bank_accounts: profile
-                .bank_accounts
-                .into_iter()
-                .map(|account| BankAccountState::from(account))
-                .collect(),
+            bank_accounts: profile.bank_accounts.into_iter().collect(),
         }
     }
 }
@@ -111,5 +104,14 @@ impl AppState {
             }),
             create: CreateState::default(),
         }
+    }
+
+    pub fn get_profile(&self) -> Profile {
+        let main_state = self
+            .main
+            .as_ref()
+            .expect("MainState should not be None when saving profile.");
+
+        main_state.profile.get_profile()
     }
 }

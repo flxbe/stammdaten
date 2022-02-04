@@ -25,13 +25,14 @@ pub fn build_create_window() -> impl Widget<AppState> {
         )
         .with_default_spacer()
         .with_child(
-            Button::new("Erstellen").on_click(|_ctx, state: &mut AppState, _env| {
+            Button::new("Erstellen").on_click(|ctx, state: &mut AppState, _env| {
                 let profile = Profile::new(
                     state.create.first_name.as_str().into(),
                     state.create.last_name.as_str().into(),
                 );
 
                 *state = AppState::from_profile(profile);
+                ctx.submit_command(druid::commands::SAVE_FILE);
             }),
         )
 }

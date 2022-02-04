@@ -1,6 +1,6 @@
 use super::some_lens::SomeLens;
-use crate::data::{IdCard, Name, PostNumber};
-use crate::state::{BankAccountState, MainState, Nav, ProfileState};
+use crate::data::{BankAccount, IdCard, Name, PostNumber};
+use crate::state::{MainState, Nav, ProfileState};
 use crate::widgets::{NavController, OutlineButton, NAVIGATE};
 use clipboard::{ClipboardContext, ClipboardProvider};
 use druid::widget::{
@@ -209,30 +209,31 @@ fn build_bank_account_page() -> impl Widget<ProfileState> {
         .expand()
 }
 
-fn build_bank_account() -> impl Widget<BankAccountState> {
+fn build_bank_account() -> impl Widget<BankAccount> {
     Flex::row()
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .must_fill_main_axis(true)
         .with_child(
             Flex::column()
                 .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Label::dynamic(|account: &BankAccountState, _env| {
+                .with_child(Label::dynamic(|account: &BankAccount, _env| {
                     account.iban.clone()
                 }))
                 .with_child(
-                    Label::dynamic(|account: &BankAccountState, _env| account.name.clone())
+                    Label::dynamic(|account: &BankAccount, _env| account.name.clone())
                         .with_text_size(12.0),
                 ),
         )
         .with_flex_spacer(1.0)
         .with_child(
             OutlineButton::new("Onlinebanking")
-                .on_click(|_ctx, account: &mut BankAccountState, _env| open_url(&account.url)),
+                .on_click(|_ctx, account: &mut BankAccount, _env| open_url(&account.url)),
         )
         .with_default_spacer()
-        .with_child(OutlineButton::new("IBAN Kopieren").on_click(
-            |_ctx, account: &mut BankAccountState, _env| copy_to_clipboard(&account.iban),
-        ))
+        .with_child(
+            OutlineButton::new("IBAN Kopieren")
+                .on_click(|_ctx, account: &mut BankAccount, _env| copy_to_clipboard(&account.iban)),
+        )
         .padding(10.0)
 }
 
