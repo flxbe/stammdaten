@@ -18,6 +18,7 @@ const CLEAR_SOCIAL_SECURITY_NUMBER: Selector<()> =
     Selector::new("app.main.clear_social_security_number");
 const CLEAR_TAX_ID: Selector<()> = Selector::new("app.main.clear_tax_id");
 const CLEAR_POST_NUMBER: Selector<()> = Selector::new("app.main.clear_post_number");
+const CLEAR_BANK_ACCOUNT: Selector<String> = Selector::new("app.main.clear_bank_account");
 
 pub struct MainController;
 
@@ -64,6 +65,20 @@ where
             }
             Event::Notification(not) if not.is(CLEAR_POST_NUMBER) => {
                 data.profile.post_number = None;
+                ctx.submit_command(druid::commands::SAVE_FILE);
+                ctx.set_handled();
+            }
+            Event::Notification(not) if not.is(CLEAR_BANK_ACCOUNT) => {
+                let iban = not.get(CLEAR_BANK_ACCOUNT).unwrap();
+
+                data.profile.bank_accounts = data
+                    .profile
+                    .bank_accounts
+                    .iter()
+                    .filter(|account| account.iban != *iban)
+                    .map(|account| account.to_owned())
+                    .collect();
+
                 ctx.submit_command(druid::commands::SAVE_FILE);
                 ctx.set_handled();
             }
@@ -295,11 +310,21 @@ where
 }
 
 fn build_bank_account_page() -> impl Widget<ProfileState> {
-    List::new(|| build_bank_account())
-        .with_spacing(10.0)
-        .lens(ProfileState::bank_accounts)
+    Flex::column()
+        .with_flex_child(
+            List::new(|| build_bank_account())
+                .with_spacing(10.0)
+                .lens(ProfileState::bank_accounts),
+            1.0,
+        )
+        .with_default_spacer()
+        .with_default_spacer()
+        .with_child(
+            OutlineButton::new("Neues Konto Erstellen").on_click(|ctx, _, _| {
+                ctx.submit_command(START_PROCESS.with(Process::CreateBankAccount))
+            }),
+        )
         .padding(10.0)
-        .expand()
 }
 
 fn build_bank_account() -> impl Widget<BankAccount> {
@@ -319,7 +344,13 @@ fn build_bank_account() -> impl Widget<BankAccount> {
         )
         .with_flex_spacer(1.0)
         .with_child(
-            OutlineButton::new("Onlinebanking")
+            OutlineButton::new("Löschen").on_click(|ctx, account: &mut BankAccount, _| {
+                ctx.submit_notification(CLEAR_BANK_ACCOUNT.with(account.iban.to_owned()))
+            }),
+        )
+        .with_default_spacer()
+        .with_child(
+            OutlineButton::new("Banking")
                 .on_click(|_ctx, account: &mut BankAccount, _env| open_url(&account.url)),
         )
         .with_default_spacer()

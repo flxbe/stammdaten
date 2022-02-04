@@ -76,6 +76,7 @@ pub enum Process {
     CreateTaxId,
     CreatePostNumber,
     CreateIdCard,
+    CreateBankAccount,
 }
 
 #[derive(Clone, Data, Lens)]
