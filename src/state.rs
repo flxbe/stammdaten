@@ -70,10 +70,18 @@ impl From<Profile> for ProfileState {
     }
 }
 
+#[derive(Clone, Copy, Data, PartialEq, Eq, Debug)]
+pub enum Process {
+    CreateSocialSecurityNumber,
+    CreateTaxId,
+    CreatePostNumber,
+}
+
 #[derive(Clone, Data, Lens)]
 pub struct MainState {
     pub profile: ProfileState,
     pub nav: Nav,
+    pub active_process: Option<Process>,
 }
 
 #[derive(Clone, Data, Lens, Default)]
@@ -101,6 +109,7 @@ impl AppState {
             main: Some(MainState {
                 profile: ProfileState::from(profile),
                 nav: Nav::Home,
+                active_process: None,
             }),
             create: CreateState::default(),
         }

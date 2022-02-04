@@ -31,6 +31,19 @@ impl TryFrom<u64> for TaxId {
     }
 }
 
+impl TryFrom<&str> for TaxId {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let clean: String = value.split_whitespace().collect();
+
+        match clean.parse::<u64>() {
+            Ok(number) => TaxId::try_from(number),
+            Err(_) => Err(format!("Tax-ID invalid: {}", value)),
+        }
+    }
+}
+
 impl Into<u64> for TaxId {
     fn into(self) -> u64 {
         self.value

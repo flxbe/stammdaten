@@ -31,6 +31,19 @@ impl TryFrom<u32> for PostNumber {
     }
 }
 
+impl TryFrom<&str> for PostNumber {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let clean: String = value.split_whitespace().collect();
+
+        match clean.parse::<u32>() {
+            Ok(number) => PostNumber::try_from(number),
+            Err(_) => Err(format!("PostNumber invalid: {}", value)),
+        }
+    }
+}
+
 impl Into<u32> for PostNumber {
     fn into(self) -> u32 {
         self.value

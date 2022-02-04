@@ -1,16 +1,54 @@
 use super::some_lens::SomeLens;
-use crate::data::{BankAccount, IdCard, Name, PostNumber};
-use crate::state::{MainState, Nav, ProfileState};
-use crate::widgets::{NavController, OutlineButton, NAVIGATE};
+use crate::data::{BankAccount, IdCard, Name};
+use crate::state::{MainState, Nav, Process, ProfileState};
+use crate::widgets::OutlineButton;
 use clipboard::{ClipboardContext, ClipboardProvider};
 use druid::widget::{
-    CrossAxisAlignment, Flex, Label, List, MainAxisAlignment, SizedBox, Split, Svg, SvgData,
-    ViewSwitcher,
+    Controller, CrossAxisAlignment, Flex, Label, List, MainAxisAlignment, SizedBox, Split, Svg,
+    SvgData, ViewSwitcher,
 };
-use druid::{theme, Env, EventCtx, LensExt, Widget, WidgetExt};
+use druid::{theme, Env, Event, EventCtx, LensExt, Selector, Widget, WidgetExt};
 use webbrowser;
 
-pub fn build_main_window() -> impl Widget<MainState> {
+pub const START_PROCESS: Selector<Process> = Selector::new("app.start_process");
+pub const NAVIGATE: Selector<Nav> = Selector::new("app.navigate");
+
+pub struct MainController;
+
+impl<W> Controller<MainState, W> for MainController
+where
+    W: Widget<MainState>,
+{
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut MainState,
+        env: &Env,
+    ) {
+        match event {
+            Event::Command(cmd) if cmd.is(NAVIGATE) => {
+                let nav = cmd.get_unchecked(NAVIGATE);
+                data.nav = *nav;
+                ctx.set_handled();
+            }
+            Event::Command(cmd) if cmd.is(START_PROCESS) => {
+                // The current process should be None when a new process is started.
+                assert_eq!(data.active_process, None);
+
+                let process = cmd.get_unchecked(START_PROCESS);
+                data.active_process = Some(*process);
+                ctx.set_handled();
+            }
+            _ => {
+                child.event(ctx, event, data, env);
+            }
+        }
+    }
+}
+
+pub fn build() -> impl Widget<MainState> {
     let sidebar = Flex::column()
         .must_fill_main_axis(true)
         .with_child(build_sidebar_header().lens(MainState::profile.then(ProfileState::name)))
@@ -33,7 +71,7 @@ pub fn build_main_window() -> impl Widget<MainState> {
         .min_size(150.0, 300.0)
         .min_bar_area(1.0)
         .solid_bar(true)
-        .controller(NavController)
+        .controller(MainController)
 }
 
 fn build_sidebar_header() -> impl Widget<Name> {
@@ -84,19 +122,23 @@ fn build_home() -> impl Widget<ProfileState> {
         .with_child(
             build_optional_item(
                 String::from("Sozialversichersungsnummer"),
-                |_ctx, _state, _env| {},
+                |ctx, _state, _env| {
+                    ctx.submit_command(START_PROCESS.with(Process::CreateSocialSecurityNumber))
+                },
             )
             .lens(ProfileState::social_security_number),
         )
         .with_default_spacer()
         .with_child(
-            build_optional_item(String::from("Steuer-ID"), |_ctx, _state, _env| {})
-                .lens(ProfileState::tax_id),
+            build_optional_item(String::from("Steuer-ID"), |ctx, _state, _env| {
+                ctx.submit_command(START_PROCESS.with(Process::CreateTaxId))
+            })
+            .lens(ProfileState::tax_id),
         )
         .with_default_spacer()
         .with_child(
-            build_optional_item(String::from("Postnummer"), |_ctx, state, _env| {
-                *state = Some(PostNumber::try_from(123456789).unwrap())
+            build_optional_item(String::from("Postnummer"), |ctx, _state, _env| {
+                ctx.submit_command(START_PROCESS.with(Process::CreatePostNumber))
             })
             .lens(ProfileState::post_number),
         )

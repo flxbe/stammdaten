@@ -1,11 +1,12 @@
 use crate::data::Profile;
 use crate::state::{AppState, CreateState};
+use crate::widgets::OutlineButton;
 use druid::widget::{
-    Button, CrossAxisAlignment, Flex, Label, MainAxisAlignment, TextBox, Widget, WidgetExt,
+    CrossAxisAlignment, Flex, Label, MainAxisAlignment, TextBox, Widget, WidgetExt,
 };
 use druid::LensExt;
 
-pub fn build_create_window() -> impl Widget<AppState> {
+pub fn build() -> impl Widget<AppState> {
     Flex::column()
         .must_fill_main_axis(true)
         .cross_axis_alignment(CrossAxisAlignment::Center)
@@ -25,7 +26,7 @@ pub fn build_create_window() -> impl Widget<AppState> {
         )
         .with_default_spacer()
         .with_child(
-            Button::new("Erstellen").on_click(|ctx, state: &mut AppState, _env| {
+            OutlineButton::new("Erstellen").on_click(|ctx, state: &mut AppState, _env| {
                 let profile = Profile::new(
                     state.create.first_name.as_str().into(),
                     state.create.last_name.as_str().into(),
