@@ -13,6 +13,12 @@ use webbrowser;
 pub const START_PROCESS: Selector<Process> = Selector::new("app.start_process");
 pub const NAVIGATE: Selector<Nav> = Selector::new("app.navigate");
 
+const CLEAR_ID_CARD: Selector<()> = Selector::new("app.main.clear_id_card");
+const CLEAR_SOCIAL_SECURITY_NUMBER: Selector<()> =
+    Selector::new("app.main.clear_social_security_number");
+const CLEAR_TAX_ID: Selector<()> = Selector::new("app.main.clear_tax_id");
+const CLEAR_POST_NUMBER: Selector<()> = Selector::new("app.main.clear_post_number");
+
 pub struct MainController;
 
 impl<W> Controller<MainState, W> for MainController
@@ -39,6 +45,26 @@ where
 
                 let process = cmd.get_unchecked(START_PROCESS);
                 data.active_process = Some(*process);
+                ctx.set_handled();
+            }
+            Event::Notification(not) if not.is(CLEAR_ID_CARD) => {
+                data.profile.id_card = None;
+                ctx.submit_command(druid::commands::SAVE_FILE);
+                ctx.set_handled();
+            }
+            Event::Notification(not) if not.is(CLEAR_SOCIAL_SECURITY_NUMBER) => {
+                data.profile.social_security_number = None;
+                ctx.submit_command(druid::commands::SAVE_FILE);
+                ctx.set_handled();
+            }
+            Event::Notification(not) if not.is(CLEAR_TAX_ID) => {
+                data.profile.tax_id = None;
+                ctx.submit_command(druid::commands::SAVE_FILE);
+                ctx.set_handled();
+            }
+            Event::Notification(not) if not.is(CLEAR_POST_NUMBER) => {
+                data.profile.post_number = None;
+                ctx.submit_command(druid::commands::SAVE_FILE);
                 ctx.set_handled();
             }
             _ => {
@@ -125,21 +151,28 @@ fn build_home() -> impl Widget<ProfileState> {
                 |ctx, _state, _env| {
                     ctx.submit_command(START_PROCESS.with(Process::CreateSocialSecurityNumber))
                 },
+                |ctx, _, _| ctx.submit_notification(CLEAR_SOCIAL_SECURITY_NUMBER),
             )
             .lens(ProfileState::social_security_number),
         )
         .with_default_spacer()
         .with_child(
-            build_optional_item(String::from("Steuer-ID"), |ctx, _state, _env| {
-                ctx.submit_command(START_PROCESS.with(Process::CreateTaxId))
-            })
+            build_optional_item(
+                String::from("Steuer-ID"),
+                |ctx, _state, _env| ctx.submit_command(START_PROCESS.with(Process::CreateTaxId)),
+                |ctx, _, _| ctx.submit_notification(CLEAR_TAX_ID),
+            )
             .lens(ProfileState::tax_id),
         )
         .with_default_spacer()
         .with_child(
-            build_optional_item(String::from("Postnummer"), |ctx, _state, _env| {
-                ctx.submit_command(START_PROCESS.with(Process::CreatePostNumber))
-            })
+            build_optional_item(
+                String::from("Postnummer"),
+                |ctx, _state, _env| {
+                    ctx.submit_command(START_PROCESS.with(Process::CreatePostNumber))
+                },
+                |ctx, _, _| ctx.submit_notification(CLEAR_POST_NUMBER),
+            )
             .lens(ProfileState::post_number),
         )
         .padding(10.0)
@@ -181,6 +214,12 @@ fn build_id_card_item() -> impl Widget<IdCard> {
                     .with_text_size(12.0),
                 ),
         )
+        .with_flex_spacer(1.0)
+        .with_child(
+            OutlineButton::new("Löschen")
+                .on_click(|ctx, _, _| ctx.submit_notification(CLEAR_ID_CARD)),
+        )
+        .with_default_spacer()
         .with_child(OutlineButton::new("Kopieren").on_click(
             move |_ctx, state: &mut IdCard, _env| copy_to_clipboard(state.card_number.to_string()),
         ))
@@ -190,6 +229,7 @@ fn build_id_card_item() -> impl Widget<IdCard> {
 fn build_optional_item<T>(
     title: String,
     on_create: impl Fn(&mut EventCtx, &mut Option<T>, &Env) + 'static + Copy,
+    on_delete: impl Fn(&mut EventCtx, &mut T, &Env) + 'static + Copy,
 ) -> impl Widget<Option<T>>
 where
     T: Into<String> + druid::Data,
@@ -197,7 +237,7 @@ where
     ViewSwitcher::new(
         |state: &Option<T>, _env| state.is_some(),
         move |state, _state, _env| match state {
-            true => Box::new(build_item(&title).lens(SomeLens)),
+            true => Box::new(build_item(&title, on_delete).lens(SomeLens)),
             false => Box::new(build_add_button(&title, on_create)),
         },
     )
@@ -224,7 +264,10 @@ where
         .padding(10.0)
 }
 
-fn build_item<T>(title: &str) -> impl Widget<T>
+fn build_item<T>(
+    title: &str,
+    on_delete: impl Fn(&mut EventCtx, &mut T, &Env) + 'static,
+) -> impl Widget<T>
 where
     T: Into<String> + druid::Data,
 {
@@ -238,6 +281,12 @@ where
                 .with_child(Label::new(move |state: &T, _env: &_| state.clone().into()))
                 .with_child(Label::new(title).with_text_size(12.0)),
         )
+        .with_flex_spacer(1.0)
+        .with_child(
+            OutlineButton::new("Löschen")
+                .on_click(move |ctx, state: &mut T, env| on_delete(ctx, state, env)),
+        )
+        .with_default_spacer()
         .with_child(
             OutlineButton::new("Kopieren")
                 .on_click(move |_ctx, state: &mut T, _env| copy_to_clipboard(state.clone().into())),
