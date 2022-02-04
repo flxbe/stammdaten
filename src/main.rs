@@ -54,6 +54,7 @@ fn app_menu<T: Data>() -> MenuDesc<T> {
     return MenuDesc::empty();
 }
 
+#[warn(dead_code)]
 fn edit_menu<T: Data>() -> MenuDesc<T> {
     MenuDesc::new(LocalizedString::new("common-menu-edit-menu"))
         .append(platform_menus::common::cut().disabled())
