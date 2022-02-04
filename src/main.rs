@@ -42,15 +42,16 @@ fn main() -> Result<(), PlatformError> {
     Ok(())
 }
 
+#[allow(unreachable_code)]
 fn app_menu<T: Data>() -> MenuDesc<T> {
-    let mut menu = MenuDesc::empty();
     #[cfg(target_os = "macos")]
     {
-        menu = menu.append(platform_menus::mac::application::default());
-        menu = menu.append(edit_menu());
+        return MenuDesc::empty()
+            .append(platform_menus::mac::application::default())
+            .append(edit_menu());
     }
 
-    menu
+    return MenuDesc::empty();
 }
 
 fn edit_menu<T: Data>() -> MenuDesc<T> {
