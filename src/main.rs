@@ -7,8 +7,8 @@ use crate::data::Profile;
 use crate::state::AppState;
 use directories::ProjectDirs;
 use druid::{
-    commands, AppDelegate, AppLauncher, Command, DelegateCtx, Env, Handled, PlatformError, Target,
-    WindowDesc,
+    commands, platform_menus, AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, Handled,
+    LocalizedString, MenuDesc, PlatformError, Target, WindowDesc,
 };
 use std::fs::File;
 use std::path::PathBuf;
@@ -32,6 +32,7 @@ fn main() -> Result<(), PlatformError> {
     AppLauncher::with_window(
         WindowDesc::new(ui::build_ui)
             .title("Stammdaten")
+            .menu(app_menu())
             .window_size((800.0, 600.0))
             .resizable(false),
     )
@@ -39,6 +40,24 @@ fn main() -> Result<(), PlatformError> {
     .use_simple_logger()
     .launch(initial_state)?;
     Ok(())
+}
+
+fn app_menu<T: Data>() -> MenuDesc<T> {
+    let mut menu = MenuDesc::empty();
+    #[cfg(target_os = "macos")]
+    {
+        menu = menu.append(platform_menus::mac::application::default());
+        menu = menu.append(edit_menu());
+    }
+
+    menu
+}
+
+fn edit_menu<T: Data>() -> MenuDesc<T> {
+    MenuDesc::new(LocalizedString::new("common-menu-edit-menu"))
+        .append(platform_menus::common::cut().disabled())
+        .append(platform_menus::common::copy())
+        .append(platform_menus::common::paste())
 }
 
 fn get_config_path() -> PathBuf {

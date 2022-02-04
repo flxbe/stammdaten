@@ -1,5 +1,5 @@
 [package]
-name = "de_data"
+name = "stammdaten"
 version = "0.1.0"
 edition = "2021"
 description = "manage basic administration data"
@@ -7,7 +7,6 @@ description = "manage basic administration data"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clipboard = "0.5.0"
 chrono = { version = "0.4", features = ["serde"] }
 directories = "4.0.1"
 druid = { version = "0.7.0", features = ["svg", "im"] }

@@ -2,12 +2,11 @@ use super::some_lens::SomeLens;
 use crate::data::{BankAccount, IdCard, Name};
 use crate::state::{MainState, Nav, Process, ProfileState};
 use crate::widgets::OutlineButton;
-use clipboard::{ClipboardContext, ClipboardProvider};
 use druid::widget::{
     Controller, CrossAxisAlignment, Flex, Label, List, MainAxisAlignment, SizedBox, Split, Svg,
     SvgData, ViewSwitcher,
 };
-use druid::{theme, Env, Event, EventCtx, LensExt, Selector, Widget, WidgetExt};
+use druid::{theme, Application, Env, Event, EventCtx, LensExt, Selector, Widget, WidgetExt};
 use webbrowser;
 
 pub const START_PROCESS: Selector<Process> = Selector::new("app.start_process");
@@ -362,8 +361,8 @@ fn build_bank_account() -> impl Widget<BankAccount> {
 }
 
 fn copy_to_clipboard(value: impl Into<String>) {
-    let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-    ctx.set_contents(value.into()).unwrap();
+    let mut clipboard = Application::global().clipboard();
+    clipboard.put_string(value.into());
 }
 
 fn open_url(url: &str) {
