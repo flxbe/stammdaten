@@ -151,7 +151,9 @@ fn build_optional_id_card() -> impl Widget<Option<IdCard>> {
         |state: &Option<IdCard>, _env| state.is_some(),
         move |state, _state, _env| match state {
             true => Box::new(build_id_card_item().lens(SomeLens)),
-            false => Box::new(build_add_button("Personalausweis".into(), |_, _, _| {})),
+            false => Box::new(build_add_button("Personalausweis".into(), |ctx, _, _| {
+                ctx.submit_command(START_PROCESS.with(Process::CreateIdCard))
+            })),
         },
     )
 }

@@ -1,3 +1,4 @@
+mod create_id_card;
 mod create_post_number;
 mod create_profile;
 mod create_social_security_number;
@@ -42,6 +43,9 @@ pub fn build_ui() -> impl Widget<AppState> {
                 }
                 Process::CreatePostNumber => {
                     Box::new(create_post_number::build().lens(AppState::main.then(SomeLens)))
+                }
+                Process::CreateIdCard => {
+                    Box::new(create_id_card::build().lens(AppState::main.then(SomeLens)))
                 }
             },
         },
