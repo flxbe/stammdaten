@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
-#[serde(try_from = "u32", into = "u32")]
+#[serde(try_from = "&str", into = "String")]
 pub struct PostNumber {
     value: u32,
 }
@@ -73,7 +73,7 @@ mod test {
     use super::*;
     #[test]
     fn should_correctly_cast_to_string() {
-        let post_number = PostNumber { value: 123456789 };
+        let post_number = PostNumber::try_from("123 456789").unwrap();
 
         assert_eq!("123 456 789", post_number.to_string());
     }

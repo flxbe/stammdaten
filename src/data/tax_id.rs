@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
-#[serde(try_from = "u64", into = "u64")]
+#[serde(try_from = "&str", into = "String")]
 pub struct TaxId {
     value: u64,
 }
