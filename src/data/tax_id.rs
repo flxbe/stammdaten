@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
-#[serde(try_from = "u64", into = "u64")]
+#[serde(try_from = "&str", into = "String")]
 pub struct TaxId {
     value: u64,
 }
@@ -31,9 +31,28 @@ impl TryFrom<u64> for TaxId {
     }
 }
 
+impl TryFrom<&str> for TaxId {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let clean: String = value.split_whitespace().collect();
+
+        match clean.parse::<u64>() {
+            Ok(number) => TaxId::try_from(number),
+            Err(_) => Err(format!("Tax-ID invalid: {}", value)),
+        }
+    }
+}
+
 impl Into<u64> for TaxId {
     fn into(self) -> u64 {
         self.value
+    }
+}
+
+impl Into<String> for TaxId {
+    fn into(self) -> String {
+        self.to_string()
     }
 }
 

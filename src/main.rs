@@ -1,219 +1,101 @@
 mod data;
 mod state;
+mod ui;
 mod widgets;
 
 use crate::data::Profile;
-use crate::state::{AppState, BankAccountState, Nav, ProfileState};
-use crate::widgets::{NavController, OutlineButton, NAVIGATE};
-use clipboard::{ClipboardContext, ClipboardProvider};
-use druid::widget::{
-    CrossAxisAlignment, Flex, Label, List, MainAxisAlignment, SizedBox, Split, Svg, SvgData,
-    ViewSwitcher,
+use crate::state::AppState;
+use directories::ProjectDirs;
+use druid::{
+    commands, platform_menus, AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, Handled,
+    LocalizedString, MenuDesc, PlatformError, Target, WindowDesc,
 };
-use druid::{theme, AppLauncher, LensExt, PlatformError, Widget, WidgetExt, WindowDesc};
-use webbrowser;
+use std::fs::File;
+use std::path::PathBuf;
 
-fn build_ui() -> impl Widget<AppState> {
-    let sidebar = Flex::column()
-        .must_fill_main_axis(true)
-        .with_child(build_sidebar_header())
-        .with_child(build_sidebar_navigation())
-        .background(theme::BACKGROUND_LIGHT);
-
-    let main = ViewSwitcher::new(
-        |state: &AppState, _env| state.nav,
-        |nav, _state, _env| match nav {
-            Nav::Home => Box::new(build_home()),
-            Nav::BankAccounts => Box::new(build_bank_account_page()),
-        },
-    )
-    .background(theme::BACKGROUND_DARK)
-    .expand();
-
-    Split::columns(sidebar, main)
-        .split_point(0.3)
-        .bar_size(1.0)
-        .min_size(150.0, 300.0)
-        .min_bar_area(1.0)
-        .solid_bar(true)
-        .controller(NavController)
-}
-
-fn build_sidebar_header() -> impl Widget<AppState> {
-    let profile_svg = include_str!("profile-svgrepo-com.svg")
-        .parse::<SvgData>()
-        .unwrap();
-
-    Flex::column()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .with_child(
-            SizedBox::new(Svg::new(profile_svg))
-                .height(50.0)
-                .width(50.0),
-        )
-        .with_spacer(10.0)
-        .with_child(
-            Flex::column()
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Label::new(|state: &AppState, _env: &_| {
-                    format!("{} {}", state.profile.first_name, state.profile.last_name)
-                })),
-        )
-        .expand_width()
-        .padding(30.0)
-}
-
-fn build_sidebar_navigation() -> impl Widget<AppState> {
-    Flex::column()
-        .with_default_spacer()
-        .with_child(sidebar_link_widget("Basisdaten", Nav::Home))
-        .with_child(sidebar_link_widget("Konten", Nav::BankAccounts))
-}
-
-fn sidebar_link_widget(title: &str, link_nav: Nav) -> impl Widget<AppState> {
-    Label::new(title)
-        .with_text_size(20.0)
-        .expand_width()
-        .lens(AppState::nav)
-        .padding((25.0, 10.0))
-        .on_click(move |ctx, _, _| ctx.submit_command(NAVIGATE.with(link_nav)))
-}
-
-fn build_home() -> impl Widget<AppState> {
-    Flex::column()
-        .cross_axis_alignment(CrossAxisAlignment::Start)
-        .with_child(build_id_card_item())
-        .with_default_spacer()
-        .with_child(build_home_item("Sozialversicherungsnummer", |state| {
-            state.profile.social_security_number.to_string()
-        }))
-        .with_default_spacer()
-        .with_child(build_home_item("Steuer-ID", |state| {
-            state.profile.tax_id.to_string()
-        }))
-        .with_default_spacer()
-        .with_child(build_home_item("Postnummer", |state| {
-            state.profile.post_number.to_string()
-        }))
-        .padding(10.0)
-        .expand()
-}
-
-fn build_id_card_item() -> impl Widget<AppState> {
-    Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .main_axis_alignment(MainAxisAlignment::SpaceBetween)
-        .must_fill_main_axis(true)
-        .with_child(
-            Flex::column()
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(
-                    Flex::row().with_child(Label::dynamic(|state: &AppState, _env| {
-                        state.profile.id_card.card_number.to_string()
-                    })),
-                )
-                .with_child(
-                    Label::dynamic(|state: &AppState, _env| {
-                        format!(
-                            "Personalsausweis - {} Tage gültig",
-                            state.profile.id_card.time_until_expiration().num_days()
-                        )
-                    })
-                    .with_text_size(12.0),
-                ),
-        )
-        .with_child(OutlineButton::new("Kopieren").on_click(
-            move |_ctx, state: &mut AppState, _env| {
-                copy_to_clipboard(state.profile.id_card.card_number.to_string())
-            },
-        ))
-        .padding(10.0)
-}
-
-fn build_home_item(
-    title: &str,
-    f: impl Fn(&AppState) -> String + 'static + Copy,
-) -> impl Widget<AppState> {
-    Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .main_axis_alignment(MainAxisAlignment::SpaceBetween)
-        .must_fill_main_axis(true)
-        .with_child(
-            Flex::column()
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(
-                    Flex::row().with_child(Label::new(move |state: &AppState, _env: &_| f(state))),
-                )
-                .with_child(Label::new(title).with_text_size(12.0)),
-        )
-        .with_child(
-            OutlineButton::new("Kopieren")
-                .on_click(move |_ctx, state: &mut AppState, _env| copy_to_clipboard(f(state))),
-        )
-        .padding(10.0)
-}
-
-fn build_bank_account_page() -> impl Widget<AppState> {
-    List::new(|| build_bank_account())
-        .with_spacing(10.0)
-        .lens(AppState::profile.then(ProfileState::bank_accounts))
-        .padding(10.0)
-        .expand()
-}
-
-fn build_bank_account() -> impl Widget<BankAccountState> {
-    Flex::row()
-        .cross_axis_alignment(CrossAxisAlignment::Center)
-        .must_fill_main_axis(true)
-        .with_child(
-            Flex::column()
-                .cross_axis_alignment(CrossAxisAlignment::Start)
-                .with_child(Label::dynamic(|account: &BankAccountState, _env| {
-                    account.iban.clone()
-                }))
-                .with_child(
-                    Label::dynamic(|account: &BankAccountState, _env| account.name.clone())
-                        .with_text_size(12.0),
-                ),
-        )
-        .with_flex_spacer(1.0)
-        .with_child(
-            OutlineButton::new("Onlinebanking")
-                .on_click(|_ctx, account: &mut BankAccountState, _env| open_url(&account.url)),
-        )
-        .with_default_spacer()
-        .with_child(OutlineButton::new("IBAN Kopieren").on_click(
-            |_ctx, account: &mut BankAccountState, _env| copy_to_clipboard(&account.iban),
-        ))
-        .padding(10.0)
-}
-
-fn copy_to_clipboard(value: impl Into<String>) {
-    let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
-    ctx.set_contents(value.into()).unwrap();
-}
-
-fn open_url(url: &str) {
-    webbrowser::open(url).unwrap();
-}
+const PROFILE_FILENAME: &str = "profile.json";
 
 fn main() -> Result<(), PlatformError> {
-    let profile = include_str!("../data.json")
-        .parse::<Profile>()
-        .expect("Could not read the profile");
+    let profile_path = get_config_path().join(PROFILE_FILENAME);
+    let profile = match File::open(profile_path) {
+        Ok(mut file) => {
+            Some(Profile::load_from_file(&mut file).expect("Could not load profile file"))
+        }
+        Err(_) => None,
+    };
 
-    let initial_state = AppState {
-        profile: ProfileState::from(profile),
-        nav: Nav::Home,
+    let initial_state = match profile {
+        Some(profile) => AppState::from_profile(profile),
+        None => AppState::new(),
     };
 
     AppLauncher::with_window(
-        WindowDesc::new(build_ui)
+        WindowDesc::new(ui::build_ui)
             .title("Stammdaten")
+            .menu(app_menu())
             .window_size((800.0, 600.0))
             .resizable(false),
     )
+    .delegate(Delegate)
     .use_simple_logger()
     .launch(initial_state)?;
     Ok(())
+}
+
+#[allow(unreachable_code)]
+fn app_menu<T: Data>() -> MenuDesc<T> {
+    #[cfg(target_os = "macos")]
+    {
+        return MenuDesc::empty()
+            .append(platform_menus::mac::application::default())
+            .append(edit_menu());
+    }
+
+    return MenuDesc::empty();
+}
+
+#[warn(dead_code)]
+fn edit_menu<T: Data>() -> MenuDesc<T> {
+    MenuDesc::new(LocalizedString::new("common-menu-edit-menu"))
+        .append(platform_menus::common::cut().disabled())
+        .append(platform_menus::common::copy())
+        .append(platform_menus::common::paste())
+}
+
+fn get_config_path() -> PathBuf {
+    let project_dirs =
+        ProjectDirs::from("io", "flxbe", "Stammdaten").expect("Could not load project directories");
+
+    project_dirs.config_dir().to_path_buf()
+}
+
+/// Global command handler.
+struct Delegate;
+
+impl AppDelegate<AppState> for Delegate {
+    fn command(
+        &mut self,
+        _ctx: &mut DelegateCtx,
+        _target: Target,
+        cmd: &Command,
+        data: &mut AppState,
+        _env: &Env,
+    ) -> Handled {
+        if cmd.is(commands::SAVE_FILE) {
+            let config_path = get_config_path();
+            std::fs::create_dir_all(&config_path).expect("Could not create data directory");
+
+            let profile_path = config_path.join(PROFILE_FILENAME);
+            let profile = data.get_profile();
+
+            let mut file = File::create(profile_path).expect("Could not open file to save profile");
+            profile
+                .save_to_file(&mut file)
+                .expect("Could not save profile");
+
+            return Handled::Yes;
+        }
+
+        return Handled::No;
+    }
 }
