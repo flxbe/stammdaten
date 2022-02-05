@@ -17,5 +17,5 @@ webbrowser = "0.5.5"
 
 [package.metadata.bundle]
 name = "Stammdaten"
-identifier = "io.flxbe.de_data"
+identifier = "de.flxbe.stammdaten"
 short_description = "Stammdaten"
