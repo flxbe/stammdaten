@@ -14,9 +14,9 @@ impl TryFrom<&str> for IdCardNumber {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         // See: https://www.bmi.bund.de/SharedDocs/downloads/DE/veroeffentlichungen/themen/moderne-verwaltung/ausweise/personalausweis-seriennummer.html
-        static VALID_ID_NUMBER_CHARS: [char; 26] = [
+        static VALID_ID_NUMBER_CHARS: [char; 27] = [
             'C', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'R', 'T', 'V', 'W', 'X', 'Y', 'Z',
-            '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
         ];
 
         if !value.chars().all(|c| VALID_ID_NUMBER_CHARS.contains(&c)) {
@@ -63,12 +63,12 @@ mod test {
 
     #[test]
     fn should_only_accept_valid_id_card_numbers() {
-        IdCardNumber::try_from("9321CFG").unwrap();
+        IdCardNumber::try_from("09321CFG").unwrap();
     }
 
     #[test]
     fn should_reject_invalid_id_card_numbers() {
-        let value = IdCardNumber::try_from("0O");
+        let value = IdCardNumber::try_from("O");
 
         assert_eq!(value.is_err(), true);
     }
