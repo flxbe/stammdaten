@@ -85,7 +85,7 @@ pub fn build() -> impl Widget<MainState> {
 
             let id_card = IdCard {
                 card_number,
-                expires_after: Utc
+                valid_until: Utc
                     .from_local_datetime(&valid_until.and_hms(0, 0, 0))
                     .unwrap(),
             };

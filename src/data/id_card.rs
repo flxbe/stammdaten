@@ -44,12 +44,12 @@ impl IdCardNumber {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 pub struct IdCard {
     pub card_number: IdCardNumber,
-    pub expires_after: DateTime<Utc>,
+    pub valid_until: DateTime<Utc>,
 }
 
 impl IdCard {
     pub fn time_until_expiration(&self) -> Duration {
-        self.expires_after - Utc::now()
+        self.valid_until - Utc::now()
     }
 
     pub fn has_expired(&self) -> bool {
@@ -87,10 +87,10 @@ mod test {
         assert_eq!(card.has_expired(), false);
     }
 
-    fn create_id_card(expires_after: DateTime<Utc>) -> IdCard {
+    fn create_id_card(valid_until: DateTime<Utc>) -> IdCard {
         return IdCard {
             card_number: IdCardNumber::try_from("123").unwrap(),
-            expires_after,
+            valid_until,
         };
     }
 }

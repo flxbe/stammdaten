@@ -84,7 +84,7 @@ mod test {
             },
             id_card: Some(IdCard {
                 card_number: IdCardNumber::try_from("48328FGW9").unwrap(),
-                expires_after: Utc::now(),
+                valid_until: Utc::now(),
             }),
             social_security_number: Some(SocialSecurityNumber::try_from("50 010101 N012").unwrap()),
             tax_id: Some(TaxId::try_from(12_123_456_789).unwrap()),
