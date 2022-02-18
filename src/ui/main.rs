@@ -1,6 +1,11 @@
 use super::some_lens::SomeLens;
-use crate::data::{BankAccount, IdCard, Name};
-use crate::state::{MainState, Nav, Process, ProfileState};
+use crate::data::{BankAccount, IdCard, Name, Profile};
+use crate::state::{CreatePostNumberState, HomeState, MainState, Nav, ProfileState};
+use crate::ui::create_bank_account;
+use crate::ui::create_id_card;
+use crate::ui::create_post_number;
+use crate::ui::create_social_security_number;
+use crate::ui::create_tax_id;
 use crate::widgets::OutlineButton;
 use druid::widget::{
     Controller, CrossAxisAlignment, Flex, Label, List, MainAxisAlignment, SizedBox, Split, Svg,
@@ -9,7 +14,11 @@ use druid::widget::{
 use druid::{theme, Application, Env, Event, EventCtx, LensExt, Selector, Widget, WidgetExt};
 use webbrowser;
 
+pub const CREATE_SOCIAL_SECURITY_NUMBER: Selector<()> =
+    Selector::new("app.home.create_social_security_number");
+
 pub const START_PROCESS: Selector<Process> = Selector::new("app.start_process");
+const GO_TO_HOME: Selector<HomeState> = Selector::new("app.main.go_to_home");
 pub const NAVIGATE: Selector<Nav> = Selector::new("app.navigate");
 
 const CLEAR_ID_CARD: Selector<()> = Selector::new("app.main.clear_id_card");
@@ -18,6 +27,16 @@ const CLEAR_SOCIAL_SECURITY_NUMBER: Selector<()> =
 const CLEAR_TAX_ID: Selector<()> = Selector::new("app.main.clear_tax_id");
 const CLEAR_POST_NUMBER: Selector<()> = Selector::new("app.main.clear_post_number");
 const CLEAR_BANK_ACCOUNT: Selector<String> = Selector::new("app.main.clear_bank_account");
+
+pub const PROFILE_UPDATED: Selector<Profile> = Selector::new("app.main.profile_updated");
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Process {
+    CreateTaxId,
+    CreatePostNumber,
+    CreateIdCard,
+    CreateBankAccount,
+}
 
 pub struct MainController;
 
@@ -34,37 +53,122 @@ where
         env: &Env,
     ) {
         match event {
+            Event::Notification(notification) if notification.is(CREATE_SOCIAL_SECURITY_NUMBER) => {
+                match data {
+                    MainState::Home(state) => {
+                        *data = MainState::CreateSocialSecurityNumber(state.clone());
+                    }
+                    _ => panic!("Cannot start a process when not in MainState::Home"),
+                }
+            }
+            Event::Notification(notification) if notification.is(GO_TO_HOME) => {
+                *data = MainState::Home(notification.get(GO_TO_HOME).unwrap().clone());
+            }
+            Event::Command(cmd) if cmd.is(START_PROCESS) => {
+                match data {
+                    MainState::Home(state) => {
+                        let process = cmd.get_unchecked(START_PROCESS);
+                        *data = match process {
+                            Process::CreateBankAccount => {
+                                MainState::CreateBankAccount(state.clone())
+                            }
+                            Process::CreateIdCard => MainState::CreateIdCard(state.clone()),
+                            Process::CreateTaxId => MainState::CreateTaxId(state.clone()),
+                            Process::CreatePostNumber => {
+                                MainState::CreatePostNumber(CreatePostNumberState {
+                                    home_state: state.clone(),
+                                    form_state: create_post_number::FormState::default(),
+                                })
+                            }
+                        }
+                    }
+                    _ => panic!("Cannot start a process when not in MainState::Home"),
+                }
+                ctx.set_handled();
+            }
+            _ => {
+                child.event(ctx, event, data, env);
+            }
+        }
+    }
+}
+
+pub struct CreatePostNumberController;
+
+impl<W> Controller<CreatePostNumberState, W> for CreatePostNumberController
+where
+    W: Widget<CreatePostNumberState>,
+{
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut CreatePostNumberState,
+        env: &Env,
+    ) {
+        // 937 532 425
+        match event {
+            Event::Notification(not) if not.is(create_post_number::CANCELED) => {
+                println!("LOL@");
+                ctx.submit_notification(GO_TO_HOME.with(data.home_state.clone()));
+                ctx.set_handled();
+            }
+            Event::Notification(not) if not.is(create_post_number::CREATED) => {
+                let post_number = not.get(create_post_number::CREATED).unwrap();
+
+                let mut state = data.home_state.clone();
+                state.profile.post_number = Some(post_number.clone());
+                ctx.submit_notification(PROFILE_UPDATED.with(state.profile.get_profile()));
+
+                ctx.submit_notification(GO_TO_HOME.with(state));
+                ctx.set_handled();
+            }
+            _ => {
+                child.event(ctx, event, data, env);
+            }
+        }
+    }
+}
+
+pub struct HomeController;
+
+impl<W> Controller<HomeState, W> for HomeController
+where
+    W: Widget<HomeState>,
+{
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut HomeState,
+        env: &Env,
+    ) {
+        match event {
             Event::Command(cmd) if cmd.is(NAVIGATE) => {
                 let nav = cmd.get_unchecked(NAVIGATE);
                 data.nav = *nav;
                 ctx.set_handled();
             }
-            Event::Command(cmd) if cmd.is(START_PROCESS) => {
-                // The current process should be None when a new process is started.
-                assert_eq!(data.active_process, None);
-
-                let process = cmd.get_unchecked(START_PROCESS);
-                data.active_process = Some(*process);
-                ctx.set_handled();
-            }
             Event::Notification(not) if not.is(CLEAR_ID_CARD) => {
                 data.profile.id_card = None;
-                ctx.submit_command(druid::commands::SAVE_FILE);
+                ctx.submit_notification(PROFILE_UPDATED.with(data.profile.get_profile()));
                 ctx.set_handled();
             }
             Event::Notification(not) if not.is(CLEAR_SOCIAL_SECURITY_NUMBER) => {
                 data.profile.social_security_number = None;
-                ctx.submit_command(druid::commands::SAVE_FILE);
+                ctx.submit_notification(PROFILE_UPDATED.with(data.profile.get_profile()));
                 ctx.set_handled();
             }
             Event::Notification(not) if not.is(CLEAR_TAX_ID) => {
                 data.profile.tax_id = None;
-                ctx.submit_command(druid::commands::SAVE_FILE);
+                ctx.submit_notification(PROFILE_UPDATED.with(data.profile.get_profile()));
                 ctx.set_handled();
             }
             Event::Notification(not) if not.is(CLEAR_POST_NUMBER) => {
                 data.profile.post_number = None;
-                ctx.submit_command(druid::commands::SAVE_FILE);
+                ctx.submit_notification(PROFILE_UPDATED.with(data.profile.get_profile()));
                 ctx.set_handled();
             }
             Event::Notification(not) if not.is(CLEAR_BANK_ACCOUNT) => {
@@ -78,7 +182,7 @@ where
                     .map(|account| account.to_owned())
                     .collect();
 
-                ctx.submit_command(druid::commands::SAVE_FILE);
+                ctx.submit_notification(PROFILE_UPDATED.with(data.profile.get_profile()));
                 ctx.set_handled();
             }
             _ => {
@@ -89,17 +193,32 @@ where
 }
 
 pub fn build() -> impl Widget<MainState> {
+    MainState::matcher()
+        .home(build_screen())
+        .create_id_card(create_id_card::build())
+        .create_social_security_number(create_social_security_number::build())
+        .create_tax_id(create_tax_id::build())
+        .create_post_number(
+            create_post_number::build()
+                .lens(CreatePostNumberState::form_state)
+                .controller(CreatePostNumberController),
+        )
+        .create_bank_account(create_bank_account::build())
+        .controller(MainController)
+}
+
+fn build_screen() -> impl Widget<HomeState> {
     let sidebar = Flex::column()
         .must_fill_main_axis(true)
-        .with_child(build_sidebar_header().lens(MainState::profile.then(ProfileState::name)))
+        .with_child(build_sidebar_header().lens(HomeState::profile.then(ProfileState::name)))
         .with_child(build_sidebar_navigation())
         .background(theme::BACKGROUND_LIGHT);
 
     let main = ViewSwitcher::new(
-        |state: &MainState, _env| state.nav,
+        |state: &HomeState, _env| state.nav,
         |nav, _state, _env| match nav {
-            Nav::Home => Box::new(build_home().lens(MainState::profile)),
-            Nav::BankAccounts => Box::new(build_bank_account_page().lens(MainState::profile)),
+            Nav::Home => Box::new(build_home().lens(HomeState::profile)),
+            Nav::BankAccounts => Box::new(build_bank_account_page().lens(HomeState::profile)),
         },
     )
     .background(theme::BACKGROUND_DARK)
@@ -111,7 +230,7 @@ pub fn build() -> impl Widget<MainState> {
         .min_size(150.0, 300.0)
         .min_bar_area(1.0)
         .solid_bar(true)
-        .controller(MainController)
+        .controller(HomeController)
 }
 
 fn build_sidebar_header() -> impl Widget<Name> {
@@ -138,18 +257,18 @@ fn build_sidebar_header() -> impl Widget<Name> {
         .padding(30.0)
 }
 
-fn build_sidebar_navigation() -> impl Widget<MainState> {
+fn build_sidebar_navigation() -> impl Widget<HomeState> {
     Flex::column()
         .with_default_spacer()
         .with_child(sidebar_link_widget("Basisdaten", Nav::Home))
         .with_child(sidebar_link_widget("Konten", Nav::BankAccounts))
 }
 
-fn sidebar_link_widget(title: &str, link_nav: Nav) -> impl Widget<MainState> {
+fn sidebar_link_widget(title: &str, link_nav: Nav) -> impl Widget<HomeState> {
     Label::new(title)
         .with_text_size(20.0)
         .expand_width()
-        .lens(MainState::nav)
+        .lens(HomeState::nav)
         .padding((25.0, 10.0))
         .on_click(move |ctx, _, _| ctx.submit_command(NAVIGATE.with(link_nav)))
 }
@@ -162,9 +281,7 @@ fn build_home() -> impl Widget<ProfileState> {
         .with_child(
             build_optional_item(
                 String::from("Sozialversichersungsnummer"),
-                |ctx, _state, _env| {
-                    ctx.submit_command(START_PROCESS.with(Process::CreateSocialSecurityNumber))
-                },
+                |ctx, _state, _env| ctx.submit_notification(CREATE_SOCIAL_SECURITY_NUMBER),
                 |ctx, _, _| ctx.submit_notification(CLEAR_SOCIAL_SECURITY_NUMBER),
             )
             .lens(ProfileState::social_security_number),

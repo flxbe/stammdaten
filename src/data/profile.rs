@@ -13,7 +13,7 @@ pub struct Name {
     pub last_name: String,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
 pub struct BankAccount {
     pub name: String,
     pub iban: String,

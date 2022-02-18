@@ -1,12 +1,15 @@
 use crate::data::BankAccount;
-use crate::state::MainState;
+use crate::state::HomeState;
 use crate::widgets::OutlineButton;
 use crate::widgets::{cancel_form, submit_form, Form};
 use druid::widget::{
     CrossAxisAlignment, Flex, Label, MainAxisAlignment, TextBox, Widget, WidgetExt,
 };
-use druid::{Data, Lens};
+use druid::{Data, Lens, Selector};
 use std::sync::Arc;
+
+pub const CANCELED: Selector<()> = Selector::new("main.create_bank_account.canceled");
+pub const CREATED: Selector<BankAccount> = Selector::new("main.create_bank_account.created");
 
 #[derive(Data, Lens, PartialEq, Eq, Clone, Default)]
 pub struct FormState {
@@ -16,7 +19,7 @@ pub struct FormState {
     pub error: Option<String>,
 }
 
-pub fn build() -> impl Widget<MainState> {
+pub fn build() -> impl Widget<HomeState> {
     let child = Flex::column()
         .must_fill_main_axis(true)
         .cross_axis_alignment(CrossAxisAlignment::Center)
@@ -65,10 +68,10 @@ pub fn build() -> impl Widget<MainState> {
     };
 
     Form::new(initial_state, child)
-        .on_cancel(|_ctx, state: &mut MainState, _env| {
-            state.active_process = None;
+        .on_cancel(|ctx, _state: &mut HomeState, _env| {
+            ctx.submit_notification(CANCELED);
         })
-        .on_submit(|ctx, state: &mut MainState, data: &mut FormState, _env| {
+        .on_submit(|ctx, _state: &mut HomeState, data: &mut FormState, _env| {
             let name = data.name.as_str();
             if name.is_empty() {
                 data.error = Some("Name must not be empty".into());
@@ -93,8 +96,6 @@ pub fn build() -> impl Widget<MainState> {
                 url: url.into(),
             };
 
-            state.profile.bank_accounts.push_back(bank_account);
-            state.active_process = None;
-            ctx.submit_command(druid::commands::SAVE_FILE);
+            ctx.submit_notification(CREATED.with(bank_account));
         })
 }

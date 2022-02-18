@@ -5,8 +5,10 @@
 //! the ser/de and the ui modules.
 
 use crate::data::{BankAccount, IdCard, Name, PostNumber, Profile, SocialSecurityNumber, TaxId};
+use crate::ui::create_post_number;
 use druid::im::Vector;
 use druid::{Data, Lens};
+use druid_enums::Matcher;
 use std::convert::From;
 use std::sync::Arc;
 
@@ -28,13 +30,13 @@ impl_data_simple!(TaxId);
 impl_data_simple!(PostNumber);
 impl_data_simple!(BankAccount);
 
-#[derive(Clone, Copy, Data, PartialEq)]
+#[derive(Clone, Copy, Data, PartialEq, Eq, Debug)]
 pub enum Nav {
     Home,
     BankAccounts,
 }
 
-#[derive(Clone, Data, Lens)]
+#[derive(Clone, Data, Lens, PartialEq, Eq, Debug)]
 pub struct ProfileState {
     pub name: Name,
     pub id_card: Option<IdCard>,
@@ -45,7 +47,7 @@ pub struct ProfileState {
 }
 
 impl ProfileState {
-    fn get_profile(&self) -> Profile {
+    pub fn get_profile(&self) -> Profile {
         Profile {
             name: self.name.clone(),
             id_card: self.id_card.clone(),
@@ -70,20 +72,26 @@ impl From<Profile> for ProfileState {
     }
 }
 
-#[derive(Clone, Copy, Data, PartialEq, Eq, Debug)]
-pub enum Process {
-    CreateSocialSecurityNumber,
-    CreateTaxId,
-    CreatePostNumber,
-    CreateIdCard,
-    CreateBankAccount,
-}
-
-#[derive(Clone, Data, Lens)]
-pub struct MainState {
+#[derive(Clone, Data, Lens, PartialEq, Eq, Debug)]
+pub struct HomeState {
     pub profile: ProfileState,
     pub nav: Nav,
-    pub active_process: Option<Process>,
+}
+
+#[derive(Clone, Data, Lens, PartialEq, Eq, Debug)]
+pub struct CreatePostNumberState {
+    pub home_state: HomeState,
+    pub form_state: create_post_number::FormState,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Data, Matcher)]
+pub enum MainState {
+    Home(HomeState),
+    CreateSocialSecurityNumber(HomeState),
+    CreateTaxId(HomeState),
+    CreatePostNumber(CreatePostNumberState),
+    CreateIdCard(HomeState),
+    CreateBankAccount(HomeState),
 }
 
 #[derive(Clone, Data, Lens, Default)]
@@ -92,37 +100,35 @@ pub struct CreateState {
     pub last_name: Arc<String>,
 }
 
-#[derive(Clone, Data, Lens)]
-pub struct AppState {
-    pub main: Option<MainState>,
-    pub create: CreateState,
+#[derive(Clone, Data, Matcher)]
+pub enum AppState {
+    Create(CreateState),
+    Main(MainState),
 }
 
 impl AppState {
     pub fn new() -> AppState {
-        AppState {
-            main: None,
-            create: CreateState::default(),
-        }
+        AppState::Create(CreateState::default())
     }
 
     pub fn from_profile(profile: Profile) -> AppState {
-        AppState {
-            main: Some(MainState {
-                profile: ProfileState::from(profile),
-                nav: Nav::Home,
-                active_process: None,
-            }),
-            create: CreateState::default(),
-        }
+        AppState::Main(MainState::Home(HomeState {
+            profile: ProfileState::from(profile),
+            nav: Nav::Home,
+        }))
     }
 
     pub fn get_profile(&self) -> Profile {
-        let main_state = self
-            .main
-            .as_ref()
-            .expect("MainState should not be None when saving profile.");
-
-        main_state.profile.get_profile()
+        match self {
+            AppState::Create(_) => panic!("AppState should be in Main state"),
+            AppState::Main(state) => match state {
+                MainState::Home(state) => state.profile.get_profile(),
+                MainState::CreateBankAccount(state) => state.profile.get_profile(),
+                MainState::CreateIdCard(state) => state.profile.get_profile(),
+                MainState::CreatePostNumber(state) => state.home_state.profile.get_profile(),
+                MainState::CreateSocialSecurityNumber(state) => state.profile.get_profile(),
+                MainState::CreateTaxId(state) => state.profile.get_profile(),
+            },
+        }
     }
 }

@@ -1,12 +1,16 @@
 use crate::data::SocialSecurityNumber;
-use crate::state::MainState;
+use crate::state::HomeState;
 use crate::widgets::OutlineButton;
 use crate::widgets::{cancel_form, submit_form, Form};
 use druid::widget::{
     CrossAxisAlignment, Flex, Label, MainAxisAlignment, TextBox, Widget, WidgetExt,
 };
-use druid::{Data, Lens};
+use druid::{Data, Lens, Selector};
 use std::sync::Arc;
+
+pub const CANCELED: Selector<()> = Selector::new("main.create_social_security_number.canceled");
+pub const CREATED: Selector<SocialSecurityNumber> =
+    Selector::new("main.create_social_security_number.created");
 
 #[derive(Data, Lens, PartialEq, Eq, Clone, Default)]
 pub struct FormState {
@@ -14,7 +18,7 @@ pub struct FormState {
     pub error: Option<String>,
 }
 
-pub fn build() -> impl Widget<MainState> {
+pub fn build() -> impl Widget<HomeState> {
     let child = Flex::column()
         .must_fill_main_axis(true)
         .cross_axis_alignment(CrossAxisAlignment::Center)
@@ -53,16 +57,14 @@ pub fn build() -> impl Widget<MainState> {
     };
 
     Form::new(initial_state, child)
-        .on_cancel(|_ctx, state: &mut MainState, _env| {
-            state.active_process = None;
+        .on_cancel(|ctx, _state: &mut HomeState, _env| {
+            ctx.submit_notification(CANCELED);
         })
-        .on_submit(|ctx, state: &mut MainState, data: &mut FormState, _env| {
+        .on_submit(|ctx, _state: &mut HomeState, data: &mut FormState, _env| {
             let value = data.value.as_str();
             match SocialSecurityNumber::try_from(value) {
                 Ok(value) => {
-                    state.profile.social_security_number = Some(value);
-                    state.active_process = None;
-                    ctx.submit_command(druid::commands::SAVE_FILE);
+                    ctx.submit_notification(CREATED.with(value));
                 }
                 Err(error) => {
                     data.error = Some(format!("{:?}", error));

@@ -6,9 +6,10 @@ mod widgets;
 use crate::data::Profile;
 use crate::state::AppState;
 use directories::ProjectDirs;
+use druid::menu::Menu;
 use druid::{
     commands, platform_menus, AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, Handled,
-    LocalizedString, MenuDesc, PlatformError, Target, WindowDesc,
+    LocalizedString, PlatformError, Target, WindowDesc,
 };
 use std::fs::File;
 use std::path::PathBuf;
@@ -30,36 +31,36 @@ fn main() -> Result<(), PlatformError> {
     };
 
     AppLauncher::with_window(
-        WindowDesc::new(ui::build_ui)
+        WindowDesc::new(ui::build_ui())
             .title("Stammdaten")
-            .menu(app_menu())
+            .menu(|_, _, _| app_menu())
             .window_size((800.0, 600.0))
             .resizable(false),
     )
     .delegate(Delegate)
-    .use_simple_logger()
+    .log_to_console()
     .launch(initial_state)?;
     Ok(())
 }
 
 #[allow(unreachable_code)]
-fn app_menu<T: Data>() -> MenuDesc<T> {
+fn app_menu<T: Data>() -> Menu<T> {
     #[cfg(target_os = "macos")]
     {
-        return MenuDesc::empty()
-            .append(platform_menus::mac::application::default())
-            .append(edit_menu());
+        return Menu::empty()
+            .entry(platform_menus::mac::application::default())
+            .entry(edit_menu());
     }
 
-    return MenuDesc::empty();
+    return Menu::empty();
 }
 
 #[warn(dead_code)]
-fn edit_menu<T: Data>() -> MenuDesc<T> {
-    MenuDesc::new(LocalizedString::new("common-menu-edit-menu"))
-        .append(platform_menus::common::cut().disabled())
-        .append(platform_menus::common::copy())
-        .append(platform_menus::common::paste())
+fn edit_menu<T: Data>() -> Menu<T> {
+    Menu::new(LocalizedString::new("common-menu-edit-menu"))
+        .entry(platform_menus::common::cut().enabled(false))
+        .entry(platform_menus::common::copy())
+        .entry(platform_menus::common::paste())
 }
 
 fn get_config_path() -> PathBuf {

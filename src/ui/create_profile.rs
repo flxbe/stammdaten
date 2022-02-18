@@ -1,12 +1,14 @@
 use crate::data::Profile;
-use crate::state::{AppState, CreateState};
+use crate::state::CreateState;
 use crate::widgets::OutlineButton;
 use druid::widget::{
     CrossAxisAlignment, Flex, Label, MainAxisAlignment, TextBox, Widget, WidgetExt,
 };
-use druid::LensExt;
+use druid::Selector;
 
-pub fn build() -> impl Widget<AppState> {
+pub const PROFILE_CREATED: Selector<Profile> = Selector::new("app.main.profile_created");
+
+pub fn build() -> impl Widget<CreateState> {
     Flex::column()
         .must_fill_main_axis(true)
         .cross_axis_alignment(CrossAxisAlignment::Center)
@@ -16,24 +18,23 @@ pub fn build() -> impl Widget<AppState> {
         .with_child(
             TextBox::new()
                 .with_placeholder("Vorname")
-                .lens(AppState::create.then(CreateState::first_name)),
+                .lens(CreateState::first_name),
         )
         .with_default_spacer()
         .with_child(
             TextBox::new()
                 .with_placeholder("Nachname")
-                .lens(AppState::create.then(CreateState::last_name)),
+                .lens(CreateState::last_name),
         )
         .with_default_spacer()
-        .with_child(
-            OutlineButton::new("Erstellen").on_click(|ctx, state: &mut AppState, _env| {
+        .with_child(OutlineButton::new("Erstellen").on_click(
+            |ctx, state: &mut CreateState, _env| {
                 let profile = Profile::new(
-                    state.create.first_name.as_str().into(),
-                    state.create.last_name.as_str().into(),
+                    state.first_name.as_str().into(),
+                    state.last_name.as_str().into(),
                 );
 
-                *state = AppState::from_profile(profile);
-                ctx.submit_command(druid::commands::SAVE_FILE);
-            }),
-        )
+                ctx.submit_notification(PROFILE_CREATED.with(profile));
+            },
+        ))
 }
