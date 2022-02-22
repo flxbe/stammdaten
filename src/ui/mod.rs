@@ -34,6 +34,8 @@ where
             Event::Notification(not) if not.is(create_profile::PROFILE_CREATED) => {
                 let profile = not.get(create_profile::PROFILE_CREATED).unwrap();
 
+                *data = AppState::from_profile(profile.clone());
+
                 ctx.submit_command(SAVE_PROFILE.with(profile.clone()));
                 ctx.set_handled();
             }
