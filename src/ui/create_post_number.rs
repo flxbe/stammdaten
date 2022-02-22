@@ -6,8 +6,8 @@ use druid::widget::{
 use druid::{Data, Lens, Selector};
 use std::sync::Arc;
 
-pub const CANCELED: Selector<()> = Selector::new("main.create_post_number.canceled");
-pub const CREATED: Selector<PostNumber> = Selector::new("main.create_post_number.created");
+pub const CANCELED: Selector<()> = Selector::new("app.main.create_post_number.canceled");
+pub const CREATED: Selector<PostNumber> = Selector::new("app.main.create_post_number.created");
 
 #[derive(Data, Lens, PartialEq, Eq, Clone, Default, Debug)]
 pub struct FormState {

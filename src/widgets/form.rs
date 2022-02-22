@@ -67,6 +67,8 @@ impl<T: Data, F: Data, W: Widget<F>> Widget<T> for Form<T, F, W> {
                 self.update_state(ctx, new_state);
             }
         }
+
+        // TODO: somehow bubble up notifications
     }
 
     fn lifecycle(&mut self, ctx: &mut LifeCycleCtx, event: &LifeCycle, _data: &T, env: &Env) {

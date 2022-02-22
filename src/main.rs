@@ -8,7 +8,7 @@ use crate::state::AppState;
 use directories::ProjectDirs;
 use druid::menu::Menu;
 use druid::{
-    commands, platform_menus, AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, Handled,
+    platform_menus, AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, Handled,
     LocalizedString, PlatformError, Target, WindowDesc,
 };
 use std::fs::File;
@@ -79,15 +79,15 @@ impl AppDelegate<AppState> for Delegate {
         _ctx: &mut DelegateCtx,
         _target: Target,
         cmd: &Command,
-        data: &mut AppState,
+        _data: &mut AppState,
         _env: &Env,
     ) -> Handled {
-        if cmd.is(commands::SAVE_FILE) {
+        if cmd.is(ui::SAVE_PROFILE) {
             let config_path = get_config_path();
             std::fs::create_dir_all(&config_path).expect("Could not create data directory");
 
             let profile_path = config_path.join(PROFILE_FILENAME);
-            let profile = data.get_profile();
+            let profile = cmd.get_unchecked(ui::SAVE_PROFILE);
 
             let mut file = File::create(profile_path).expect("Could not open file to save profile");
             profile

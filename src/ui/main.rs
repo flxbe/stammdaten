@@ -1,6 +1,9 @@
 use super::some_lens::SomeLens;
 use crate::data::{BankAccount, IdCard, Name, Profile};
-use crate::state::{CreatePostNumberState, HomeState, MainState, Nav, ProfileState};
+use crate::state::{
+    CreateBankAccountState, CreateIdCardState, CreatePostNumberState,
+    CreateSocialSecurityNumberState, CreateTaxIdState, HomeState, MainState, Nav, ProfileState,
+};
 use crate::ui::create_bank_account;
 use crate::ui::create_id_card;
 use crate::ui::create_post_number;
@@ -14,12 +17,9 @@ use druid::widget::{
 use druid::{theme, Application, Env, Event, EventCtx, LensExt, Selector, Widget, WidgetExt};
 use webbrowser;
 
-pub const CREATE_SOCIAL_SECURITY_NUMBER: Selector<()> =
-    Selector::new("app.home.create_social_security_number");
-
-pub const START_PROCESS: Selector<Process> = Selector::new("app.start_process");
+const START_PROCESS: Selector<Process> = Selector::new("app.start_process");
 const GO_TO_HOME: Selector<HomeState> = Selector::new("app.main.go_to_home");
-pub const NAVIGATE: Selector<Nav> = Selector::new("app.navigate");
+const NAVIGATE: Selector<Nav> = Selector::new("app.navigate");
 
 const CLEAR_ID_CARD: Selector<()> = Selector::new("app.main.clear_id_card");
 const CLEAR_SOCIAL_SECURITY_NUMBER: Selector<()> =
@@ -36,6 +36,7 @@ pub enum Process {
     CreatePostNumber,
     CreateIdCard,
     CreateBankAccount,
+    CreateSocialSecurityNumber,
 }
 
 pub struct MainController;
@@ -53,32 +54,31 @@ where
         env: &Env,
     ) {
         match event {
-            Event::Notification(notification) if notification.is(CREATE_SOCIAL_SECURITY_NUMBER) => {
-                match data {
-                    MainState::Home(state) => {
-                        *data = MainState::CreateSocialSecurityNumber(state.clone());
-                    }
-                    _ => panic!("Cannot start a process when not in MainState::Home"),
-                }
-            }
             Event::Notification(notification) if notification.is(GO_TO_HOME) => {
                 *data = MainState::Home(notification.get(GO_TO_HOME).unwrap().clone());
+                ctx.set_handled();
             }
             Event::Command(cmd) if cmd.is(START_PROCESS) => {
                 match data {
                     MainState::Home(state) => {
                         let process = cmd.get_unchecked(START_PROCESS);
                         *data = match process {
-                            Process::CreateBankAccount => {
-                                MainState::CreateBankAccount(state.clone())
+                            Process::CreateBankAccount => MainState::CreateBankAccount(
+                                CreateBankAccountState::from(state.clone()),
+                            ),
+                            Process::CreateIdCard => {
+                                MainState::CreateIdCard(CreateIdCardState::from(state.clone()))
                             }
-                            Process::CreateIdCard => MainState::CreateIdCard(state.clone()),
-                            Process::CreateTaxId => MainState::CreateTaxId(state.clone()),
-                            Process::CreatePostNumber => {
-                                MainState::CreatePostNumber(CreatePostNumberState {
-                                    home_state: state.clone(),
-                                    form_state: create_post_number::FormState::default(),
-                                })
+                            Process::CreateTaxId => {
+                                MainState::CreateTaxId(CreateTaxIdState::from(state.clone()))
+                            }
+                            Process::CreatePostNumber => MainState::CreatePostNumber(
+                                CreatePostNumberState::from(state.clone()),
+                            ),
+                            Process::CreateSocialSecurityNumber => {
+                                MainState::CreateSocialSecurityNumber(
+                                    CreateSocialSecurityNumberState::from(state.clone()),
+                                )
                             }
                         }
                     }
@@ -107,10 +107,8 @@ where
         data: &mut CreatePostNumberState,
         env: &Env,
     ) {
-        // 937 532 425
         match event {
             Event::Notification(not) if not.is(create_post_number::CANCELED) => {
-                println!("LOL@");
                 ctx.submit_notification(GO_TO_HOME.with(data.home_state.clone()));
                 ctx.set_handled();
             }
@@ -119,6 +117,151 @@ where
 
                 let mut state = data.home_state.clone();
                 state.profile.post_number = Some(post_number.clone());
+                ctx.submit_notification(PROFILE_UPDATED.with(state.profile.get_profile()));
+
+                ctx.submit_notification(GO_TO_HOME.with(state));
+                ctx.set_handled();
+            }
+            _ => {
+                child.event(ctx, event, data, env);
+            }
+        }
+    }
+}
+
+pub struct CreateTaxIdController;
+
+impl<W> Controller<CreateTaxIdState, W> for CreateTaxIdController
+where
+    W: Widget<CreateTaxIdState>,
+{
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut CreateTaxIdState,
+        env: &Env,
+    ) {
+        match event {
+            Event::Notification(not) if not.is(create_tax_id::CANCELED) => {
+                ctx.submit_notification(GO_TO_HOME.with(data.home_state.clone()));
+                ctx.set_handled();
+            }
+            Event::Notification(not) if not.is(create_tax_id::CREATED) => {
+                let tax_id = not.get(create_tax_id::CREATED).unwrap();
+
+                let mut state = data.home_state.clone();
+                state.profile.tax_id = Some(tax_id.clone());
+                ctx.submit_notification(PROFILE_UPDATED.with(state.profile.get_profile()));
+
+                ctx.submit_notification(GO_TO_HOME.with(state));
+                ctx.set_handled();
+            }
+            _ => {
+                child.event(ctx, event, data, env);
+            }
+        }
+    }
+}
+
+pub struct CreateIdCardController;
+
+impl<W> Controller<CreateIdCardState, W> for CreateIdCardController
+where
+    W: Widget<CreateIdCardState>,
+{
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut CreateIdCardState,
+        env: &Env,
+    ) {
+        match event {
+            Event::Notification(not) if not.is(create_id_card::CANCELED) => {
+                ctx.submit_notification(GO_TO_HOME.with(data.home_state.clone()));
+                ctx.set_handled();
+            }
+            Event::Notification(not) if not.is(create_id_card::CREATED) => {
+                let id_card = not.get(create_id_card::CREATED).unwrap();
+
+                let mut state = data.home_state.clone();
+                state.profile.id_card = Some(id_card.clone());
+                ctx.submit_notification(PROFILE_UPDATED.with(state.profile.get_profile()));
+
+                ctx.submit_notification(GO_TO_HOME.with(state));
+                ctx.set_handled();
+            }
+            _ => {
+                child.event(ctx, event, data, env);
+            }
+        }
+    }
+}
+
+pub struct CreateSocialSecurityNumberController;
+
+impl<W> Controller<CreateSocialSecurityNumberState, W> for CreateSocialSecurityNumberController
+where
+    W: Widget<CreateSocialSecurityNumberState>,
+{
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut CreateSocialSecurityNumberState,
+        env: &Env,
+    ) {
+        match event {
+            Event::Notification(not) if not.is(create_social_security_number::CANCELED) => {
+                ctx.submit_notification(GO_TO_HOME.with(data.home_state.clone()));
+                ctx.set_handled();
+            }
+            Event::Notification(not) if not.is(create_social_security_number::CREATED) => {
+                let social_security_number =
+                    not.get(create_social_security_number::CREATED).unwrap();
+
+                let mut state = data.home_state.clone();
+                state.profile.social_security_number = Some(social_security_number.clone());
+                ctx.submit_notification(PROFILE_UPDATED.with(state.profile.get_profile()));
+
+                ctx.submit_notification(GO_TO_HOME.with(state));
+                ctx.set_handled();
+            }
+            _ => {
+                child.event(ctx, event, data, env);
+            }
+        }
+    }
+}
+
+pub struct CreateBankAccountController;
+
+impl<W> Controller<CreateBankAccountState, W> for CreateBankAccountController
+where
+    W: Widget<CreateBankAccountState>,
+{
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut CreateBankAccountState,
+        env: &Env,
+    ) {
+        match event {
+            Event::Notification(not) if not.is(create_bank_account::CANCELED) => {
+                ctx.submit_notification(GO_TO_HOME.with(data.home_state.clone()));
+                ctx.set_handled();
+            }
+            Event::Notification(not) if not.is(create_bank_account::CREATED) => {
+                let bank_account = not.get(create_bank_account::CREATED).unwrap();
+
+                let mut state = data.home_state.clone();
+                state.profile.bank_accounts.push_back(bank_account.clone());
                 ctx.submit_notification(PROFILE_UPDATED.with(state.profile.get_profile()));
 
                 ctx.submit_notification(GO_TO_HOME.with(state));
@@ -195,15 +338,31 @@ where
 pub fn build() -> impl Widget<MainState> {
     MainState::matcher()
         .home(build_screen())
-        .create_id_card(create_id_card::build())
-        .create_social_security_number(create_social_security_number::build())
-        .create_tax_id(create_tax_id::build())
+        .create_id_card(
+            create_id_card::build()
+                .lens(CreateIdCardState::form_state)
+                .controller(CreateIdCardController),
+        )
+        .create_social_security_number(
+            create_social_security_number::build()
+                .lens(CreateSocialSecurityNumberState::form_state)
+                .controller(CreateSocialSecurityNumberController),
+        )
+        .create_tax_id(
+            create_tax_id::build()
+                .lens(CreateTaxIdState::form_state)
+                .controller(CreateTaxIdController),
+        )
         .create_post_number(
             create_post_number::build()
                 .lens(CreatePostNumberState::form_state)
                 .controller(CreatePostNumberController),
         )
-        .create_bank_account(create_bank_account::build())
+        .create_bank_account(
+            create_bank_account::build()
+                .lens(CreateBankAccountState::form_state)
+                .controller(CreateBankAccountController),
+        )
         .controller(MainController)
 }
 
@@ -281,7 +440,9 @@ fn build_home() -> impl Widget<ProfileState> {
         .with_child(
             build_optional_item(
                 String::from("Sozialversichersungsnummer"),
-                |ctx, _state, _env| ctx.submit_notification(CREATE_SOCIAL_SECURITY_NUMBER),
+                |ctx, _state, _env| {
+                    ctx.submit_notification(START_PROCESS.with(Process::CreateSocialSecurityNumber))
+                },
                 |ctx, _, _| ctx.submit_notification(CLEAR_SOCIAL_SECURITY_NUMBER),
             )
             .lens(ProfileState::social_security_number),

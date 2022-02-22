@@ -5,7 +5,10 @@
 //! the ser/de and the ui modules.
 
 use crate::data::{BankAccount, IdCard, Name, PostNumber, Profile, SocialSecurityNumber, TaxId};
-use crate::ui::create_post_number;
+use crate::ui::{
+    create_bank_account, create_id_card, create_post_number, create_social_security_number,
+    create_tax_id,
+};
 use druid::im::Vector;
 use druid::{Data, Lens};
 use druid_enums::Matcher;
@@ -79,19 +82,37 @@ pub struct HomeState {
 }
 
 #[derive(Clone, Data, Lens, PartialEq, Eq, Debug)]
-pub struct CreatePostNumberState {
+pub struct ProcessState<F> {
     pub home_state: HomeState,
-    pub form_state: create_post_number::FormState,
+    pub form_state: F,
 }
+
+impl<F> From<HomeState> for ProcessState<F>
+where
+    F: Default,
+{
+    fn from(home_state: HomeState) -> ProcessState<F> {
+        ProcessState {
+            home_state: home_state,
+            form_state: F::default(),
+        }
+    }
+}
+
+pub type CreatePostNumberState = ProcessState<create_post_number::FormState>;
+pub type CreateTaxIdState = ProcessState<create_tax_id::FormState>;
+pub type CreateIdCardState = ProcessState<create_id_card::FormState>;
+pub type CreateSocialSecurityNumberState = ProcessState<create_social_security_number::FormState>;
+pub type CreateBankAccountState = ProcessState<create_bank_account::FormState>;
 
 #[derive(Clone, PartialEq, Eq, Debug, Data, Matcher)]
 pub enum MainState {
     Home(HomeState),
-    CreateSocialSecurityNumber(HomeState),
-    CreateTaxId(HomeState),
+    CreateSocialSecurityNumber(CreateSocialSecurityNumberState),
+    CreateTaxId(CreateTaxIdState),
     CreatePostNumber(CreatePostNumberState),
-    CreateIdCard(HomeState),
-    CreateBankAccount(HomeState),
+    CreateIdCard(CreateIdCardState),
+    CreateBankAccount(CreateBankAccountState),
 }
 
 #[derive(Clone, Data, Lens, Default)]
@@ -116,19 +137,5 @@ impl AppState {
             profile: ProfileState::from(profile),
             nav: Nav::Home,
         }))
-    }
-
-    pub fn get_profile(&self) -> Profile {
-        match self {
-            AppState::Create(_) => panic!("AppState should be in Main state"),
-            AppState::Main(state) => match state {
-                MainState::Home(state) => state.profile.get_profile(),
-                MainState::CreateBankAccount(state) => state.profile.get_profile(),
-                MainState::CreateIdCard(state) => state.profile.get_profile(),
-                MainState::CreatePostNumber(state) => state.home_state.profile.get_profile(),
-                MainState::CreateSocialSecurityNumber(state) => state.profile.get_profile(),
-                MainState::CreateTaxId(state) => state.profile.get_profile(),
-            },
-        }
     }
 }
