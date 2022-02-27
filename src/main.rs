@@ -11,6 +11,7 @@ use druid::{
     platform_menus, AppDelegate, AppLauncher, Command, Data, DelegateCtx, Env, Handled,
     LocalizedString, PlatformError, Target, WindowDesc,
 };
+use std::env;
 use std::fs::File;
 use std::path::PathBuf;
 
@@ -64,10 +65,17 @@ fn edit_menu<T: Data>() -> Menu<T> {
 }
 
 fn get_config_path() -> PathBuf {
-    let project_dirs =
-        ProjectDirs::from("io", "flxbe", "Stammdaten").expect("Could not load project directories");
+    return PathBuf::from("./");
 
-    project_dirs.config_dir().to_path_buf()
+    match env::var("STAMMDATEN_DATA_DIR") {
+        Ok(path) => PathBuf::from(path),
+        Err(_) => {
+            let project_dirs = ProjectDirs::from("io", "flxbe", "Stammdaten")
+                .expect("Could not load project directories");
+
+            project_dirs.config_dir().to_path_buf()
+        }
+    }
 }
 
 /// Global command handler.

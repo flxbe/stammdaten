@@ -441,7 +441,7 @@ fn build_home() -> impl Widget<ProfileState> {
             build_optional_item(
                 String::from("Sozialversichersungsnummer"),
                 |ctx, _state, _env| {
-                    ctx.submit_notification(START_PROCESS.with(Process::CreateSocialSecurityNumber))
+                    ctx.submit_command(START_PROCESS.with(Process::CreateSocialSecurityNumber))
                 },
                 |ctx, _, _| ctx.submit_notification(CLEAR_SOCIAL_SECURITY_NUMBER),
             )

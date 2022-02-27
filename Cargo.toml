@@ -4,8 +4,6 @@ version = "0.1.0"
 edition = "2021"
 description = "manage basic administration data"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
 directories = "4.0.1"
@@ -21,3 +19,4 @@ webbrowser = "0.5.5"
 name = "Stammdaten"
 identifier = "de.flxbe.stammdaten"
 short_description = "Stammdaten"
+
