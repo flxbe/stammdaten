@@ -65,8 +65,6 @@ fn edit_menu<T: Data>() -> Menu<T> {
 }
 
 fn get_config_path() -> PathBuf {
-    return PathBuf::from("./");
-
     match env::var("STAMMDATEN_DATA_DIR") {
         Ok(path) => PathBuf::from(path),
         Err(_) => {
