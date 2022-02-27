@@ -6,8 +6,8 @@
 
 use crate::data::{BankAccount, IdCard, Name, PostNumber, Profile, SocialSecurityNumber, TaxId};
 use crate::ui::{
-    create_bank_account, create_id_card, create_post_number, create_social_security_number,
-    create_tax_id,
+    create_bank_account, create_id_card, create_post_number, create_profile,
+    create_social_security_number, create_tax_id,
 };
 use druid::im::Vector;
 use druid::{Data, Lens};
@@ -115,21 +115,15 @@ pub enum MainState {
     CreateBankAccount(CreateBankAccountState),
 }
 
-#[derive(Clone, Data, Lens, Default)]
-pub struct CreateState {
-    pub first_name: Arc<String>,
-    pub last_name: Arc<String>,
-}
-
 #[derive(Clone, Data, Matcher)]
 pub enum AppState {
-    Create(CreateState),
+    Create(create_profile::FormState),
     Main(MainState),
 }
 
 impl AppState {
     pub fn new() -> AppState {
-        AppState::Create(CreateState::default())
+        AppState::Create(create_profile::FormState::default())
     }
 
     pub fn from_profile(profile: Profile) -> AppState {
