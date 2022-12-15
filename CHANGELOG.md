@@ -7,9 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2022-12-15
+
+### Added
+
+- Create miscellaneous key-value items
+
+### Changed
+
+- New form styles
+
 ### Fixed
 
-- Add `0` as a valid character for Id Card numbers.
+- Add `0` as a valid character for Id Card numbers
 
 ## [0.1.0] - 2022-02-05
 
