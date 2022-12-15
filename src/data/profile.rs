@@ -2,6 +2,7 @@ use super::id_card::IdCard;
 use super::post_number::PostNumber;
 use super::social_security_number::SocialSecurityNumber;
 use super::tax_id::TaxId;
+use super::KeyValueItem;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{self, Read, Write};
@@ -28,6 +29,9 @@ pub struct Profile {
     pub post_number: Option<PostNumber>,
     pub tax_id: Option<TaxId>,
     pub bank_accounts: Vec<BankAccount>,
+
+    #[serde(default)]
+    pub key_value_items: Vec<KeyValueItem>,
 }
 
 impl Profile {
@@ -42,6 +46,7 @@ impl Profile {
             post_number: None,
             tax_id: None,
             bank_accounts: vec![],
+            key_value_items: vec![],
         }
     }
     pub fn load_from_file(file: &mut File) -> io::Result<Profile> {
@@ -93,6 +98,10 @@ mod test {
                 name: "Some Account Name".into(),
                 iban: "DE10 1010 1010 1010 1010 10".into(),
                 url: "https://banking.bank.com".into(),
+            }],
+            key_value_items: vec![KeyValueItem {
+                key: "Versicherung".into(),
+                value: "1234".into(),
             }],
         };
 

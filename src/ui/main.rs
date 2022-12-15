@@ -1,11 +1,12 @@
 use super::some_lens::SomeLens;
-use crate::data::{BankAccount, IdCard, Name, Profile};
+use crate::data::{BankAccount, IdCard, KeyValueItem, Name, Profile};
 use crate::state::{
-    CreateBankAccountState, CreateIdCardState, CreatePostNumberState,
+    CreateBankAccountState, CreateIdCardState, CreateKeyValueItemState, CreatePostNumberState,
     CreateSocialSecurityNumberState, CreateTaxIdState, HomeState, MainState, Nav, ProfileState,
 };
 use crate::ui::create_bank_account;
 use crate::ui::create_id_card;
+use crate::ui::create_key_value_item;
 use crate::ui::create_post_number;
 use crate::ui::create_social_security_number;
 use crate::ui::create_tax_id;
@@ -27,6 +28,7 @@ const CLEAR_SOCIAL_SECURITY_NUMBER: Selector<()> =
 const CLEAR_TAX_ID: Selector<()> = Selector::new("app.main.clear_tax_id");
 const CLEAR_POST_NUMBER: Selector<()> = Selector::new("app.main.clear_post_number");
 const CLEAR_BANK_ACCOUNT: Selector<String> = Selector::new("app.main.clear_bank_account");
+const REMOVE_KEY_VALUE_ITEM: Selector<String> = Selector::new("app.main.remove_key_value");
 
 pub const PROFILE_UPDATED: Selector<Profile> = Selector::new("app.main.profile_updated");
 
@@ -37,6 +39,7 @@ pub enum Process {
     CreateIdCard,
     CreateBankAccount,
     CreateSocialSecurityNumber,
+    CreateKeyValueItem,
 }
 
 pub struct MainController;
@@ -80,6 +83,9 @@ where
                                     CreateSocialSecurityNumberState::from(state.clone()),
                                 )
                             }
+                            Process::CreateKeyValueItem => MainState::CreateKeyValueItem(
+                                CreateKeyValueItemState::from(state.clone()),
+                            ),
                         }
                     }
                     _ => panic!("Cannot start a process when not in MainState::Home"),
@@ -274,6 +280,45 @@ where
     }
 }
 
+pub struct CreateKeyValueItemController;
+
+impl<W> Controller<CreateKeyValueItemState, W> for CreateKeyValueItemController
+where
+    W: Widget<CreateKeyValueItemState>,
+{
+    fn event(
+        &mut self,
+        child: &mut W,
+        ctx: &mut EventCtx,
+        event: &Event,
+        data: &mut CreateKeyValueItemState,
+        env: &Env,
+    ) {
+        match event {
+            Event::Notification(not) if not.is(create_key_value_item::CANCELED) => {
+                ctx.submit_notification(GO_TO_HOME.with(data.home_state.clone()));
+                ctx.set_handled();
+            }
+            Event::Notification(not) if not.is(create_key_value_item::CREATED) => {
+                let key_value_item = not.get(create_key_value_item::CREATED).unwrap();
+
+                let mut state = data.home_state.clone();
+                state
+                    .profile
+                    .key_value_items
+                    .push_back(key_value_item.clone());
+                ctx.submit_notification(PROFILE_UPDATED.with(state.profile.get_profile()));
+
+                ctx.submit_notification(GO_TO_HOME.with(state));
+                ctx.set_handled();
+            }
+            _ => {
+                child.event(ctx, event, data, env);
+            }
+        }
+    }
+}
+
 pub struct HomeController;
 
 impl<W> Controller<HomeState, W> for HomeController
@@ -328,6 +373,20 @@ where
                 ctx.submit_notification(PROFILE_UPDATED.with(data.profile.get_profile()));
                 ctx.set_handled();
             }
+            Event::Notification(not) if not.is(REMOVE_KEY_VALUE_ITEM) => {
+                let key = not.get(REMOVE_KEY_VALUE_ITEM).unwrap();
+
+                data.profile.key_value_items = data
+                    .profile
+                    .key_value_items
+                    .iter()
+                    .filter(|item| item.key != *key)
+                    .map(|item| item.to_owned())
+                    .collect();
+
+                ctx.submit_notification(PROFILE_UPDATED.with(data.profile.get_profile()));
+                ctx.set_handled();
+            }
             _ => {
                 child.event(ctx, event, data, env);
             }
@@ -363,6 +422,11 @@ pub fn build() -> impl Widget<MainState> {
                 .lens(CreateBankAccountState::form_state)
                 .controller(CreateBankAccountController),
         )
+        .create_key_value_item(
+            create_key_value_item::build()
+                .lens(CreateKeyValueItemState::form_state)
+                .controller(CreateKeyValueItemController),
+        )
         .controller(MainController)
 }
 
@@ -378,6 +442,7 @@ fn build_screen() -> impl Widget<HomeState> {
         |nav, _state, _env| match nav {
             Nav::Home => Box::new(build_home().lens(HomeState::profile)),
             Nav::BankAccounts => Box::new(build_bank_account_page().lens(HomeState::profile)),
+            Nav::Miscellaneous => Box::new(build_miscellaneous_page().lens(HomeState::profile)),
         },
     )
     .background(theme::BACKGROUND_DARK)
@@ -421,6 +486,7 @@ fn build_sidebar_navigation() -> impl Widget<HomeState> {
         .with_default_spacer()
         .with_child(sidebar_link_widget("Basisdaten", Nav::Home))
         .with_child(sidebar_link_widget("Konten", Nav::BankAccounts))
+        .with_child(sidebar_link_widget("Sonstiges", Nav::Miscellaneous))
 }
 
 fn sidebar_link_widget(title: &str, link_nav: Nav) -> impl Widget<HomeState> {
@@ -634,6 +700,44 @@ fn build_bank_account() -> impl Widget<BankAccount> {
         .with_child(
             OutlineButton::new("IBAN Kopieren")
                 .on_click(|_ctx, account: &mut BankAccount, _env| copy_to_clipboard(&account.iban)),
+        )
+        .padding(10.0)
+}
+
+fn build_miscellaneous_page() -> impl Widget<ProfileState> {
+    Flex::column()
+        .with_flex_child(
+            List::new(|| build_key_value_item())
+                .with_spacing(10.0)
+                .lens(ProfileState::key_value_items),
+            1.0,
+        )
+        .with_default_spacer()
+        .with_default_spacer()
+        .with_child(OutlineButton::new("Erstellen").on_click(|ctx, _, _| {
+            ctx.submit_command(START_PROCESS.with(Process::CreateKeyValueItem))
+        }))
+        .padding(10.0)
+}
+
+fn build_key_value_item() -> impl Widget<KeyValueItem> {
+    Flex::row()
+        .cross_axis_alignment(CrossAxisAlignment::Center)
+        .must_fill_main_axis(true)
+        .with_child(
+            Flex::column()
+                .cross_axis_alignment(CrossAxisAlignment::Start)
+                .with_child(Label::dynamic(|item: &KeyValueItem, _env| item.key.clone()))
+                .with_child(
+                    Label::dynamic(|item: &KeyValueItem, _env| item.value.clone())
+                        .with_text_size(12.0),
+                ),
+        )
+        .with_flex_spacer(1.0)
+        .with_child(
+            OutlineButton::new("Löschen").on_click(|ctx, item: &mut KeyValueItem, _| {
+                ctx.submit_notification(REMOVE_KEY_VALUE_ITEM.with(item.key.to_owned()))
+            }),
         )
         .padding(10.0)
 }

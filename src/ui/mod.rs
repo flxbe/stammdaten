@@ -1,5 +1,6 @@
 pub mod create_bank_account;
 pub mod create_id_card;
+pub mod create_key_value_item;
 pub mod create_post_number;
 pub mod create_profile;
 pub mod create_social_security_number;

@@ -4,16 +4,17 @@
 //! The main advantage of this is to separate the data format between
 //! the ser/de and the ui modules.
 
-use crate::data::{BankAccount, IdCard, Name, PostNumber, Profile, SocialSecurityNumber, TaxId};
+use crate::data::{
+    BankAccount, IdCard, KeyValueItem, Name, PostNumber, Profile, SocialSecurityNumber, TaxId,
+};
 use crate::ui::{
-    create_bank_account, create_id_card, create_post_number, create_profile,
+    create_bank_account, create_id_card, create_key_value_item, create_post_number, create_profile,
     create_social_security_number, create_tax_id,
 };
 use druid::im::Vector;
 use druid::{Data, Lens};
 use druid_enums::Matcher;
 use std::convert::From;
-use std::sync::Arc;
 
 /// Macro to impl the `Data` trait for structs with the `Eq` trait.
 macro_rules! impl_data_simple {
@@ -32,11 +33,13 @@ impl_data_simple!(SocialSecurityNumber);
 impl_data_simple!(TaxId);
 impl_data_simple!(PostNumber);
 impl_data_simple!(BankAccount);
+impl_data_simple!(KeyValueItem);
 
 #[derive(Clone, Copy, Data, PartialEq, Eq, Debug)]
 pub enum Nav {
     Home,
     BankAccounts,
+    Miscellaneous,
 }
 
 #[derive(Clone, Data, Lens, PartialEq, Eq, Debug)]
@@ -47,6 +50,7 @@ pub struct ProfileState {
     pub tax_id: Option<TaxId>,
     pub post_number: Option<PostNumber>,
     pub bank_accounts: Vector<BankAccount>,
+    pub key_value_items: Vector<KeyValueItem>,
 }
 
 impl ProfileState {
@@ -58,6 +62,7 @@ impl ProfileState {
             tax_id: self.tax_id.clone(),
             post_number: self.post_number.clone(),
             bank_accounts: self.bank_accounts.clone().into_iter().collect(),
+            key_value_items: self.key_value_items.clone().into_iter().collect(),
         }
     }
 }
@@ -71,6 +76,7 @@ impl From<Profile> for ProfileState {
             tax_id: profile.tax_id,
             post_number: profile.post_number,
             bank_accounts: profile.bank_accounts.into_iter().collect(),
+            key_value_items: profile.key_value_items.into_iter().collect(),
         }
     }
 }
@@ -93,7 +99,7 @@ where
 {
     fn from(home_state: HomeState) -> ProcessState<F> {
         ProcessState {
-            home_state: home_state,
+            home_state,
             form_state: F::default(),
         }
     }
@@ -104,6 +110,7 @@ pub type CreateTaxIdState = ProcessState<create_tax_id::FormState>;
 pub type CreateIdCardState = ProcessState<create_id_card::FormState>;
 pub type CreateSocialSecurityNumberState = ProcessState<create_social_security_number::FormState>;
 pub type CreateBankAccountState = ProcessState<create_bank_account::FormState>;
+pub type CreateKeyValueItemState = ProcessState<create_key_value_item::FormState>;
 
 #[derive(Clone, PartialEq, Eq, Debug, Data, Matcher)]
 pub enum MainState {
@@ -113,6 +120,7 @@ pub enum MainState {
     CreatePostNumber(CreatePostNumberState),
     CreateIdCard(CreateIdCardState),
     CreateBankAccount(CreateBankAccountState),
+    CreateKeyValueItem(CreateKeyValueItemState),
 }
 
 #[derive(Clone, Data, Matcher)]
