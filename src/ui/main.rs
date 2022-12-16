@@ -16,7 +16,6 @@ use druid::widget::{
     SvgData, ViewSwitcher,
 };
 use druid::{theme, Application, Env, Event, EventCtx, LensExt, Selector, Widget, WidgetExt};
-use webbrowser;
 
 const START_PROCESS: Selector<Process> = Selector::new("app.start_process");
 const GO_TO_HOME: Selector<HomeState> = Selector::new("app.main.go_to_home");
@@ -693,11 +692,6 @@ fn build_bank_account() -> impl Widget<BankAccount> {
         )
         .with_default_spacer()
         .with_child(
-            OutlineButton::new("Banking")
-                .on_click(|_ctx, account: &mut BankAccount, _env| open_url(&account.url)),
-        )
-        .with_default_spacer()
-        .with_child(
             OutlineButton::new("IBAN Kopieren")
                 .on_click(|_ctx, account: &mut BankAccount, _env| copy_to_clipboard(&account.iban)),
         )
@@ -735,6 +729,11 @@ fn build_key_value_item() -> impl Widget<KeyValueItem> {
         )
         .with_flex_spacer(1.0)
         .with_child(
+            OutlineButton::new("Kopieren")
+                .on_click(|_ctx, item: &mut KeyValueItem, _env| copy_to_clipboard(&item.value)),
+        )
+        .with_default_spacer()
+        .with_child(
             OutlineButton::new("Löschen").on_click(|ctx, item: &mut KeyValueItem, _| {
                 ctx.submit_notification(REMOVE_KEY_VALUE_ITEM.with(item.key.to_owned()))
             }),
@@ -745,8 +744,4 @@ fn build_key_value_item() -> impl Widget<KeyValueItem> {
 fn copy_to_clipboard(value: impl Into<String>) {
     let mut clipboard = Application::global().clipboard();
     clipboard.put_string(value.into());
-}
-
-fn open_url(url: &str) {
-    webbrowser::open(url).unwrap();
 }

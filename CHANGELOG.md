@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2022-12-16
+
+### Added
+
+- Added copy button for miscellaneous items
+
+### Removed
+
+- Removed `url` field from bank accounts
+
 ## [0.2.0] - 2022-12-15
 
 ### Added

@@ -10,7 +10,6 @@ pub const CREATED: Selector<BankAccount> = Selector::new("main.create_bank_accou
 pub struct FormState {
     pub name: InputState,
     pub iban: InputState,
-    pub url: InputState,
 }
 
 pub fn build() -> impl Widget<FormState> {
@@ -31,8 +30,6 @@ pub fn form() -> impl Widget<FormState> {
             .with_child(input("Name").lens(FormState::name))
             .with_default_spacer()
             .with_child(input("IBAN").lens(FormState::iban))
-            .with_default_spacer()
-            .with_child(input("URL").lens(FormState::url))
             .with_spacer(20.0)
             .with_child(
                 Flex::row()
@@ -52,17 +49,10 @@ pub fn form() -> impl Widget<FormState> {
                                 has_error = true;
                             }
 
-                            state.url.reset_error();
-                            if state.url.value.is_empty() {
-                                state.url.set_error(String::from("URL must not be empty"));
-                                has_error = true;
-                            }
-
                             if !has_error {
                                 let bank_account = BankAccount {
                                     name: state.name.value.as_str().into(),
                                     iban: state.iban.value.as_str().into(),
-                                    url: state.iban.value.as_str().into(),
                                 };
 
                                 ctx.submit_notification(CREATED.with(bank_account));

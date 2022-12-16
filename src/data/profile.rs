@@ -18,7 +18,6 @@ pub struct Name {
 pub struct BankAccount {
     pub name: String,
     pub iban: String,
-    pub url: String,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -97,7 +96,6 @@ mod test {
             bank_accounts: vec![BankAccount {
                 name: "Some Account Name".into(),
                 iban: "DE10 1010 1010 1010 1010 10".into(),
-                url: "https://banking.bank.com".into(),
             }],
             key_value_items: vec![KeyValueItem {
                 key: "Versicherung".into(),
